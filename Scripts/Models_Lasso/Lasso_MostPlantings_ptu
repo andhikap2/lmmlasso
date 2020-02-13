@@ -1,0 +1,88 @@
+#Lasso taking into account environmental variables and the interactions between them (scaled by scale())
+library(glmnet)
+library(caret)
+load("AllPlantings_ptu.RData")
+AllPlantings_ptu=data.frame(AllPlantings_ptu)
+for (i in unique(AllPlantings_ptu$Planting)) {
+
+	assign(paste0("",i),AllPlantings_ptu[AllPlantings_ptu$Planting==i,])
+}
+
+
+
+#Determining range of lambdas to test
+lasso_cv <- cv.glmnet(x=as.matrix(AllPlantings_ptu[,-c(1:15)]),y=as.matrix(AllPlantings_ptu$cumPTUs), alpha = 0.001, nfolds=10)
+
+### Too big to do in R... subset a random smaller sample...
+set.seed(1211)
+samplerows=sample(c(1:nrow(AllPlantings_ptu)),size=800, replace=F)
+AllPlantings_ptu_sample=AllPlantings_ptu[samplerows,]
+####
+
+
+lasso_cv <- cv.glmnet(x=as.matrix(AllPlantings_ptu_sample[,-c(1:15)]),y=as.matrix(AllPlantings_ptu_sample$cumPTUs), alpha = 0.001, nfolds=10)
+AllPlantings_ptulasso_lambda<- lasso_cv$lambda.min
+
+## Finding % variance explained by model
+
+model = glmnet(x=as.matrix(AllPlantings_ptu_sample[,-c(1:15)]),y=as.matrix(AllPlantings_ptu_sample$cumPTUs), alpha = 0.001,lambda=AllPlantings_ptulasso_lambda)
+predictions=predict(model,newx=as.matrix(AllPlantings_ptu_sample[,-c(1:15)]))
+percentage_exp=cor(predictions,AllPlantings_ptu_sample$cumPTUs)
+print(percentage_exp)
+HalleFall2006_elasticnet0.001_cumPTUs_model_araclim_imputed=model
+save(HalleFall2006_elasticnet0.001_cumPTUs_model_araclim_imputed,file="HalleFall2006_elasticnet0.001_cumPTUs_model_araclim_imputed.RData")
+
+
+Beta_HalleFall2006=HalleFall2006_elasticnet0.001_cumPTUs_model_araclim_imputed$beta[,HalleFall2006_elasticnet0.001_cumPTUs_model_araclim_imputed$dev.ratio==max(HalleFall2006_elasticnet0.001_cumPTUs_model_araclim_imputed$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of nu
+
+Beta_HalleFall2006=Beta_HalleFall2006[Beta_HalleFall2006!=0] # Retain only non-zero coefficients
+length(Beta_HalleFall2006)
+Beta_HalleFall2006[1:100]
+
+###################
+gc()
+
+
+
+
+#lasso regression (+ environmental variables)
+HalleFall2006_R2_pred=c()
+HalleFall2006_R2_exp=c()
+rownames(HalleFall2006)=NULL 
+HalleFall2006folds=createFolds(rownames(HalleFall2006),10) #You need to create the folds only once
+
+for (i in unique(HalleFall2006folds)){
+	
+	HalleFall2006_Valid=HalleFall2006[i,] #Validation set
+	HalleFall2006_Train=HalleFall2006[-i,] #Training set
+	cumPTUs_Valid=HalleFall2006[i,"cumPTUs"] #Validation set
+	cumPTUs_Train=HalleFall2006[-i,"cumPTUs"] #Training set
+
+	HalleFall2006elasticnet0.001_trainedmodel<- glmnet(x=as.matrix(HalleFall2006_Train[,-c(1:14)]),y=as.matrix(cumPTUs_Train),alpha=0.001,lambda=HalleFall2006lasso_lambda)
+	cumPTUs_hat_train=predict(HalleFall2006elasticnet0.001_trainedmodel,newx=as.matrix(HalleFall2006_Train[,-c(1:14)]))
+	corr_exp=cor(cumPTUs_hat_train,cumPTUs_Train)
+	HalleFall2006_R2_exp=c(HalleFall2006_R2_exp,corr_exp) #Measures explanatory value
+
+	cumPTUs_hat_valid=predict(HalleFall2006elasticnet0.001_trainedmodel,newx=(as.matrix(HalleFall2006_Valid[,-c(1:14)])))
+	correlation=cor(cumPTUs_hat_valid,cumPTUs_Valid) #Measures predictive value
+	HalleFall2006_R2_pred=c(HalleFall2006_R2_pred,correlation)
+}
+
+HalleFall2006_elasticnet0.001_cumPTUs_model=HalleFall2006elasticnet0.001_trainedmodel
+save(HalleFall2006_elasticnet0.001_cumPTUs_model,file="HalleFall2006_elasticnet0.001_cumPTUs_model_araclim.RData")
+
+HalleFall2006_R2_pred
+range(HalleFall2006_R2_pred)
+mean(HalleFall2006_R2_pred)
+range(HalleFall2006_R2_exp)
+
+Beta_HalleFall2006=HalleFall2006elasticnet0.001_trainedmodel$beta[,HalleFall2006elasticnet0.001_trainedmodel$dev.ratio==max(HalleFall2006elasticnet0.001_trainedmodel$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of null deviance is
+
+Beta_HalleFall2006=Beta_HalleFall2006[Beta_HalleFall2006!=0] # Retain only non-zero coefficients
+length(Beta_HalleFall2006)
+Beta_HalleFall2006[1:100]
+
+
+
+
+

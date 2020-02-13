@@ -1,0 +1,90 @@
+
+library(caret)
+library(glmnet)
+load("AllPlantings_Named_2.RData")
+
+### Separate dataset according to Plantings
+
+
+for (i in unique(AllPlantings_named$Planting)) {
+
+	assign(paste0("",i),AllPlantings_named[AllPlantings_named$Planting==i,])
+}
+
+
+
+obj
+## Cross-validation ##
+HalleFall2006=AllPlantings_named[AllPlantings_named$Planting=="HalleFall2006",]
+rownames(HalleFall2006)=NULL 
+lambdas_to_try <- 10^seq(-3, 5, length.out = 100)
+
+
+##Lasso Cross Validation using HalleFall2006 SNP Data to predict Days To Bolting (DTB)
+
+lasso_cv <- cv.glmnet(x=as.matrix(HalleFall2006[,-c(1:14)]),y=as.matrix(HalleFall2006$DTB), alpha = 1, nfolds=10)
+                  
+lasso_lambda<- lasso_cv$lambda.min
+
+save(lasso_cv,file="dada.RData")
+
+######################################
+#### Running multiple cross-validations
+lasso_R2_exp=c()
+lasso_R2_pred=c()
+folds=createFolds(rownames(HalleFall2006),10) #You need to create the folds only once
+
+
+
+
+	
+	HalleFall2006_Pred=HalleFall2006[folds$Fold05,]
+	HalleFall2006_Train=HalleFall2006[-folds$Fold05,]
+	DTB_Pred=HalleFall2006[folds$Fold05,"DTB"]
+	DTB_Train=HalleFall2006[-folds$Fold05,"DTB"]
+
+	lasso_model_trained<- glmnet(x=as.matrix(HalleFall2006_Train[,15:1738082]),y=as.matrix(DTB_Train),alpha=1,lambda=lasso_lambda)
+	DTB_hat_train=predict(lasso_model_trained,newx=as.matrix(HalleFall2006_Train[,15:1738082]))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+	lasso_R2_exp=c(lasso_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_pred=predict(lasso_model_trained,newx=(as.matrix(HalleFall2006_Pred[,15:1738082])))
+	correlation=cor(DTB_hat_pred,DTB_Pred) #Measures predictive value
+
+	lasso_R2_pred=c(lasso_R2_pred,correlation)
+
+
+Beta_HalleFall2006=lasso_model_trained$beta[,lasso_model_trained$dev.ratio==max(lasso_model_trained$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of null deviance is explained]
+Beta_HalleFall2006=Beta_HalleFall2006[Beta_HalleFall2006!=0] # Retain only non-zero coefficients
+
+
+
+
+
+
+	
+
+    HalleFall2006_Pred=HalleFall2006_[SET,] #Validation set
+    HalleFall2006_Train=HalleFall2006_[-SET,] #Training set
+    DTB_Pred=HalleFall2006_[SET,3] #Validation set
+    DTB_Train=HalleFall2006_[-SET,3] #Training set
+
+    lasso_model_trained<- glmnet(x=as.matrix(HalleFall2006_Train[,10:11]),y=as.matrix(DTB_Train), alpha = 1, lambda = lasso_lambda)
+    DTB_hat_train=predict(lasso_model_trained,newx=as.matrix(HalleFall2006_Train[,10:11]))
+    corr_exp=cor(DTB_hat_train,DTB_Train) #measures explanatory value
+	
+    DTB_hat_pred=predict(lasso_model_trained,newx=(as.matrix(HalleFall2006_Pred[,10:11])))
+    correlation=cor(DTB_Pred,DTB_hat_pred) #Measure predictive value
+	
+	lasso_R2=c(lasso_R2,correlation)
+	assign(paste0("beta",i))=lasso$beta[,lasso$dev.ratio==max(lasso$dev.ratio)] #Obtain the Beta values where dev.ratio is max [The maximum fraction of null deviance is explained]
+}
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,331 @@
+setwd("~/Clim_GWAS/Clim_GWAS_2")
+library(caret)
+library(glmnet)
+load("AllPlantings_Corrected.RData")
+
+for (i in unique(AllPlantings_Corrected$Planting)) {
+
+	assign(paste0("",i),AllPlantings_Corrected[AllPlantings_Corrected$Planting==i,])
+}
+
+
+#HalleFall2006#####################
+################################### 
+rownames(HalleFall2006)=NULL 
+lambdas_to_try <- seq(0, 1, length.out = 100)
+lasso_cv <- cv.glmnet(x=as.matrix(HalleFall2006[,-c(1:14)]),y=as.matrix(HalleFall2006$DTB), alpha = 0.001,lambda=lambdas_to_try, nfolds=10)
+lasso_lambda<- lasso_cv$lambda.min
+HalleFall2006folds=createFolds(rownames(HalleFall2006),10) #You need to create the folds only once
+
+
+	
+	HalleFall2006_Valid=HalleFall2006[HalleFall2006folds$Fold01,] #Validation set
+	HalleFall2006_Train=HalleFall2006[-HalleFall2006folds$Fold01,] #Training set
+	DTB_Valid=HalleFall2006[HalleFall2006folds$Fold01,"DTB"] #Validation set
+	DTB_Train=HalleFall2006[-HalleFall2006folds$Fold01,"DTB"] #Training set
+
+	HalleFall2006_trainedmodel<- glmnet(x=as.matrix(HalleFall2006_Train[,-c(1:14)]),y=as.matrix(DTB_Train),alpha=0.001,lambda=lasso_lambda)
+	DTB_hat_train=predict(HalleFall2006_trainedmodel,newx=as.matrix(HalleFall2006_Train[,-c(1:14)]))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+	HalleFall2006_R2_e
+	HalleFall2006_R2_exp=c(HalleFall2006_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(HalleFall2006_trainedmodel,newx=(as.matrix(HalleFall2006_Valid[,-c(1:14)])))
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+	HalleFall2006_R2_pred=c()
+	HalleFall2006_R2_pred=c(HalleFall2006_R2_pred,correlation)
+
+Beta_HalleFall2006=HalleFall2006_trainedmodel$beta[,HalleFall2006_trainedmodel$dev.ratio==max(HalleFall2006_trainedmodel$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of null deviance is
+
+Beta_HalleFall2006=Beta_HalleFall2006[Beta_HalleFall2006!=0] # Retain only non-zero coefficients
+
+save(HalleFall2006,HalleFall2006folds,HalleFall2006_trainedmodel,HalleFall2006_R2_exp,HalleFall2006_R2_pred,Beta_HalleFall2006,file="HalleFall2006.RData")
+
+rm(list=ls(pattern="HalleFall2006"))
+
+#NorwichSummer2006############
+##############################
+
+
+
+#NorwichSummer2006 
+rownames(NorwichSummer2006)=NULL 
+lambdas_to_try <- seq(0, 1, length.out = 100)
+lasso_cv <- cv.glmnet(x=as.matrix(NorwichSummer2006[,-c(1:14)]),y=as.matrix(NorwichSummer2006$DTB), alpha = 0.001, nfolds=10)
+NorwichSummer2006lambda<- lasso_cv$lambda.min
+NorwichSummer2006folds=createFolds(rownames(NorwichSummer2006),10) #You need to create the folds only once
+NorwichSummer2006_R2_exp=c()
+NorwichSummer2006_R2_pred=c()
+for (i in unique(NorwichSummer2006folds)){
+	
+	NorwichSummer2006_Valid=NorwichSummer2006[i,] #Validation set
+	NorwichSummer2006_Train=NorwichSummer2006[-i,] #Training set
+	DTB_Valid=NorwichSummer2006[i,"DTB"] #Validation set
+	DTB_Train=NorwichSummer2006[-i,"DTB"] #Training set
+
+	NorwichSummer2006_trainedmodel<- glmnet(x=as.matrix(NorwichSummer2006_Train[,-c(1:14)]),y=as.matrix(DTB_Train),alpha=0.001,lambda=NorwichSummer2006lambda)
+	DTB_hat_train=predict(NorwichSummer2006_trainedmodel,newx=as.matrix(NorwichSummer2006_Train[,-c(1:14)]))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+	NorwichSummer2006_R2_exp=c(NorwichSummer2006_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(NorwichSummer2006_trainedmodel,newx=(as.matrix(NorwichSummer2006_Valid[,-c(1:14)])))
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+	NorwichSummer2006_R2_pred=c(NorwichSummer2006_R2_pred,correlation)
+}
+
+Beta_NorwichSummer2006=NorwichSummer2006_trainedmodel$beta[,NorwichSummer2006_trainedmodel$dev.ratio==max(NorwichSummer2006_trainedmodel$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of null deviance is
+
+Beta_NorwichSummer2006=Beta_NorwichSummer2006[Beta_NorwichSummer2006!=0] # Retain only non-zero coefficients
+rm(list=ls(pattern="NorwichSummer2006"))
+
+
+save(NorwichSummer2006,NorwichSummer2006folds,NorwichSummer2006lambda,NorwichSummer2006_trainedmodel,NorwichSummer2006_R2_exp,NorwichSummer2006_R2_pred,Beta_NorwichSummer2006,file="NorwichSummer2006.RData")
+
+
+
+
+
+
+
+
+
+
+#NorwichFall2006#################
+#################################
+rownames(NorwichFall2006)=NULL 
+lambdas_to_try <- seq(0, 1, length.out = 100)
+lasso_cv <- cv.glmnet(x=as.matrix(NorwichFall2006[,-c(1:14)]),y=as.matrix(NorwichFall2006$DTB), alpha = 0.001,nfolds=10)
+NorwichFall2006lambda<- lasso_cv$lambda.min
+NorwichFall2006folds=createFolds(rownames(NorwichFall2006),10) #You need to create the folds only once
+NorwichFall2006_R2_exp=c()
+NorwichFall2006_R2_pred=c()
+
+for (i in unique(NorwichFall2006folds)){
+	
+	NorwichFall2006_Valid=NorwichFall2006[i,] #Validation set
+	NorwichFall2006_Train=NorwichFall2006[-i,] #Training set
+	DTB_Valid=NorwichFall2006[i,"DTB"] #Validation set
+	DTB_Train=NorwichFall2006[-i,"DTB"] #Training set
+
+	NorwichFall2006_trainedmodel<- glmnet(x=as.matrix(NorwichFall2006_Train[,-c(1:14)]),y=as.matrix(DTB_Train),alpha=0.001,lambda=NorwichFall2006lambda)
+	DTB_hat_train=predict(NorwichFall2006_trainedmodel,newx=as.matrix(NorwichFall2006_Train[,-c(1:14)]))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+	NorwichFall2006_R2_exp=c(NorwichFall2006_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(NorwichFall2006_trainedmodel,newx=(as.matrix(NorwichFall2006_Valid[,-c(1:14)])))
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+	NorwichFall2006_R2_pred=c(NorwichFall2006_R2_pred,correlation)
+
+}
+
+Beta_NorwichFall2006=NorwichFall2006_trainedmodel$beta[,NorwichFall2006_trainedmodel$dev.ratio==max(NorwichFall2006_trainedmodel$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of null deviance is
+
+Beta_NorwichFall2006=Beta_NorwichFall2006[Beta_NorwichFall2006!=0] # Retain only non-zero coefficients
+
+save(NorwichFall2006,NorwichFall2006folds,NorwichFall2006lambda,NorwichFall2006_trainedmodel,NorwichFall2006_R2_exp,NorwichFall2006_R2_pred,Beta_NorwichFall2006,file="NorwichFall2006.RData")
+
+
+
+
+
+
+#NorwichSpring2007#########
+###########################
+
+
+#NorwichSpring2007 
+rownames(NorwichSpring2007)=NULL 
+lambdas_to_try <- seq(0, 1, length.out = 100)
+lasso_cv <- cv.glmnet(x=as.matrix(NorwichSpring2007[,-c(1:14)]),y=as.matrix(NorwichSpring2007$DTB), alpha = 1,lambda=lambdas_to_try, nfolds=10)
+lasso_lambda<- lasso_cv$lambda.min
+NorwichSpring2007folds=createFolds(rownames(NorwichSpring2007),10) #You need to create the folds only once
+NorwichSpring2007_R2_exp=c()
+NorwichSpring2007_R2_pred=c()
+
+for (i in unique(NorwichSpring2007folds)){
+	
+	NorwichSpring2007_Valid=NorwichSpring2007[i,] #Validation set
+	NorwichSpring2007_Train=NorwichSpring2007[-i,] #Training set
+	DTB_Valid=NorwichSpring2007[i,"DTB"] #Validation set
+	DTB_Train=NorwichSpring2007[-i,"DTB"] #Training set
+
+	NorwichSpring2007_trainedmodel<- glmnet(x=as.matrix(NorwichSpring2007_Train[,-c(1:14)]),y=as.matrix(DTB_Train),alpha=1,lambda=lasso_lambda)
+
+	DTB_hat_train=predict(NorwichSpring2007_trainedmodel,newx=as.matrix(NorwichSpring2007_Train[,-c(1:14)]))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+	NorwichSpring2007_R2_exp=c(NorwichSpring2007_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(NorwichSpring2007_trainedmodel,newx=(as.matrix(NorwichSpring2007_Valid[,-c(1:14)])))
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+	NorwichSpring2007_R2_pred=c(NorwichSpring2007_R2_pred,correlation)
+}
+
+Beta_NorwichSpring2007=NorwichSpring2007_trainedmodel$beta[,NorwichSpring2007_trainedmodel$dev.ratio==max(NorwichSpring2007_trainedmodel$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of null deviance is
+
+Beta_NorwichSpring2007=Beta_NorwichSpring2007[Beta_NorwichSpring2007!=0] # Retain only non-zero coefficients
+
+save(NorwichSpring2007,NorwichSpring2007folds,NorwichSpring2007lambda,NorwichSpring2007_trainedmodel,NorwichSpring2007_R2_exp,NorwichSpring2007_R2_pred,Beta_NorwichSpring2007,file="NorwichSpring2007.RData")
+
+#NorwichSummer2007#######
+#########################
+
+
+#NorwichSummer2007 
+
+rownames(NorwichSummer2007)=NULL 
+lambdas_to_try <- seq(0, 1, length.out = 50)
+lasso_cv <- cv.glmnet(x=as.matrix(NorwichSummer2007[,-c(1:14)]),y=as.matrix(NorwichSummer2007$DTB), alpha = 1,lambda=lambdas_to_try, nfolds=10)
+NorwichSummer2007lambda<- lasso_cv$lambda.min
+NorwichSummer2007folds=createFolds(rownames(NorwichSummer2007),10) #You need to create the folds only once
+NorwichSummer2007_R2_exp=c()
+NorwichSummer2007_R2_pred=c()
+
+for (i in unique(NorwichSummer2007folds)){
+	
+	NorwichSummer2007_Valid=NorwichSummer2007[i,] #Validation set
+	NorwichSummer2007_Train=NorwichSummer2007[-i,] #Training set
+	DTB_Valid=NorwichSummer2007[i,"DTB"] #Validation set
+	DTB_Train=NorwichSummer2007[-i,"DTB"] #Training set
+
+	NorwichSummer2007_trainedmodel<- glmnet(x=as.matrix(NorwichSummer2007_Train[,-c(1:14)]),y=as.matrix(DTB_Train),alpha=1,lambda=NorwichSummer2007lambda)
+	DTB_hat_train=predict(NorwichSummer2007_trainedmodel,newx=as.matrix(NorwichSummer2007_Train[,-c(1:14)]))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+
+	NorwichSummer2007_R2_exp=c(NorwichSummer2007_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(NorwichSummer2007_trainedmodel,newx=(as.matrix(NorwichSummer2007_Valid[,-c(1:14)])))
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+
+	NorwichSummer2007_R2_pred=c(NorwichSummer2007_R2_pred,correlation)
+
+}
+
+Beta_NorwichSummer2007=NorwichSummer2007_trainedmodel$beta[,NorwichSummer2007_trainedmodel$dev.ratio==max(NorwichSummer2007_trainedmodel$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of null deviance is
+
+Beta_NorwichSummer2007=Beta_NorwichSummer2007[Beta_NorwichSummer2007!=0] # Retain only non-zero coefficients
+
+save(NorwichSummer2007,NorwichSummer2007folds,NorwichSummer2007lambda,NorwichSummer2007_trainedmodel,NorwichSummer2007_R2_exp,NorwichSummer2007_R2_pred,Beta_NorwichSummer2007,file="NorwichSummer2007.RData")
+
+#ValenciaFall2006##########
+###########################
+
+
+#ValenciaFall2006 
+rownames(ValenciaFall2006)=NULL 
+lambdas_to_try <- seq(0, 1, length.out = 50)
+lasso_cv <- cv.glmnet(x=as.matrix(ValenciaFall2006[,-c(1:14)]),y=as.matrix(ValenciaFall2006$DTB), alpha = 1, nfolds=10)
+ValenciaFall2006lambda<- lasso_cv$lambda.min
+ValenciaFall2006folds=createFolds(rownames(ValenciaFall2006),10) #You need to create the folds only once
+ValenciaFall2006_R2_exp=c()
+ValenciaFall2006_R2_pred=c()
+
+for (i in unique(ValenciaFall2006folds)){
+
+	
+	ValenciaFall2006_Valid=ValenciaFall2006[i,] #Validation set
+	ValenciaFall2006_Train=ValenciaFall2006[-i,] #Training set
+	DTB_Valid=ValenciaFall2006[i,"DTB"] #Validation set
+	DTB_Train=ValenciaFall2006[-i,"DTB"] #Training set
+
+	ValenciaFall2006_trainedmodel<- glmnet(x=as.matrix(ValenciaFall2006_Train[,-c(1:14)]),y=as.matrix(DTB_Train),alpha=1,lambda=ValenciaFall2006lambda)
+	DTB_hat_train=predict(ValenciaFall2006_trainedmodel,newx=as.matrix(ValenciaFall2006_Train[,-c(1:14)]))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+
+	ValenciaFall2006_R2_exp=c(ValenciaFall2006_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(ValenciaFall2006_trainedmodel,newx=(as.matrix(ValenciaFall2006_Valid[,-c(1:14)])))
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+
+	ValenciaFall2006_R2_pred=c(ValenciaFall2006_R2_pred,correlation)
+}
+
+
+Beta_ValenciaFall2006=ValenciaFall2006_trainedmodel$beta[,ValenciaFall2006_trainedmodel$dev.ratio==max(ValenciaFall2006_trainedmodel$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of null deviance is
+
+Beta_ValenciaFall2006=Beta_ValenciaFall2006[Beta_ValenciaFall2006!=0] # Retain only non-zero coefficients
+save(ValenciaFall2006,ValenciaFall2006folds,ValenciaFall2006lambda,ValenciaFall2006_trainedmodel,ValenciaFall2006_R2_exp,ValenciaFall2006_R2_pred,Beta_ValenciaFall2006,file="ValenciaFall2006.RData")
+
+#OuluFall2007##########
+#######################
+
+
+
+#OuluFall2007 
+rownames(OuluFall2007)=NULL 
+lambdas_to_try <- seq(0, 1, length.out = 50)
+lasso_cv <- cv.glmnet(x=as.matrix(OuluFall2007[,-c(1:14)]),y=as.matrix(OuluFall2007$DTB), alpha = 1,lambda=lambdas_to_try, nfolds=10)
+OuluFall2007lambda<- lasso_cv$lambda.min
+OuluFall2007folds=createFolds(rownames(OuluFall2007),10) #You need to create the folds only once
+OuluFall2007_R2_exp=c()
+OuluFall2007_R2_pred=c()
+for (i in unique(OuluFall2007folds)){
+	
+	OuluFall2007_Valid=OuluFall2007[i,] #Validation set
+	OuluFall2007_Train=OuluFall2007[-i,] #Training set
+	DTB_Valid=OuluFall2007[i,"DTB"] #Validation set
+	DTB_Train=OuluFall2007[-i,"DTB"] #Training set
+
+	OuluFall2007_trainedmodel<- glmnet(x=as.matrix(OuluFall2007_Train[,-c(1:14)]),y=as.matrix(DTB_Train),alpha=1,lambda=OuluFall2007lambda)
+	DTB_hat_train=predict(OuluFall2007_trainedmodel,newx=as.matrix(OuluFall2007_Train[,-c(1:14)]))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+
+	OuluFall2007_R2_exp=c(OuluFall2007_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(OuluFall2007_trainedmodel,newx=(as.matrix(OuluFall2007_Valid[,-c(1:14)])))
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+
+	OuluFall2007_R2_pred=c(OuluFall2007_R2_pred,correlation)
+}
+
+Beta_OuluFall2007=OuluFall2007_trainedmodel$beta[,OuluFall2007_trainedmodel$dev.ratio==max(OuluFall2007_trainedmodel$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of null deviance is
+
+Beta_OuluFall2007=Beta_OuluFall2007[Beta_OuluFall2007!=0] # Retain only non-zero coefficients
+
+save(OuluFall2007,OuluFall2007folds,OuluFall2007lambda,OuluFall2007_trainedmodel,OuluFall2007_R2_exp,OuluFall2007_R2_pred,Beta_OuluFall2007,file="OuluFall2007.RData")
+
+
+### Loop
+HalleFall2006_R2_exp0.00=c()
+HalleFall2006_R2_pred0.00=c()
+
+for (i in unique(HalleFall2006folds)) {
+
+	HalleFall2006_Valid=HalleFall2006[i,] #Validation set
+	HalleFall2006_Train=HalleFall2006[-i,] #Training set
+	DTB_Valid=HalleFall2006[i,"DTB"] #Validation set
+	DTB_Train=HalleFall2006[-i,"DTB"] #Training set
+
+	HalleFall2006_trainedmodel0.00<- glmnet(x=as.matrix(HalleFall2006_Train[,-c(1:14)]),y=as.matrix(DTB_Train),alpha=0.00,lambda=lasso_lambda)
+	DTB_hat_train=predict(HalleFall2006_trainedmodel0.00,newx=as.matrix(HalleFall2006_Train[,-c(1:14)]))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+
+	HalleFall2006_R2_exp0.00=c(HalleFall2006_R2_exp0.00,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(HalleFall2006_trainedmodel0.00,newx=(as.matrix(HalleFall2006_Valid[,-c(1:14)])))
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+
+	HalleFall2006_R2_pred0.00=c(HalleFall2006_R2_pred0.00,correlation)
+
+
+}
+
+Beta_HalleFall2006_0.00=HalleFall2006_trainedmodel0.00$beta[,HalleFall2006_trainedmodel0.00$dev.ratio==max(HalleFall2006_trainedmodel0.00$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of null deviance is
+
+Beta_HalleFall2006_0.00=Beta_HalleFall2006_0.00[Beta_HalleFall2006_0.00!=0] # Retain only non-zero coefficients
+
+
+
+save(HalleFall2006_trainedmodel0.00,HalleFall2006_R2_exp0.00,HalleFall2006_R2_pred0.00,Beta_HalleFall2006_0.00,file="HalleFall2006_0.00.RData")
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,161 @@
+SNP_dum=matrix(sample(c(0,1),100,replace=T),ncol=10)
+rownames(SNP_dum)=c("A","B","C","D","E","F","G","H","I","J")
+
+Y_=rnorm(15)
+names(Y_)=c(rownames(joe),rep("A",5))
+
+
+
+
+
+Accessions=read.csv("1001genomes_accessions.csv")
+load("FIBR_1001genomes_SNPs_freqfiltered.RData")
+load("Multitrait.RData")
+
+
+library(dplyr)
+Y_= Data %>% select(Ecotype_id,DsTB)
+
+Y_=na.omit(Y_)#Remove NA values
+Y_=Y_[!Y_$Ecotype_id=="no_match",] #Removes rows with ecotype id = no_match
+sum(Y_$Ecotype_id=="no_match") #should equal zero if all no_match has been removed
+
+Y_=Y_[names(Y_) %in% Accessions$tg_ecotype_id,]
+
+#Conforming SNP Data with Days to Bolting and Accessions Info
+SNP_Data=t(SNP_Data)
+
+rownames(SNP_Data) = gsub("X", "", rownames(SNP_Data))
+
+
+
+
+
+Geno=matrix(NA,nrow=nrow(Y_),ncol=ncol(SNP_Data))
+rownames(Geno)=(Y_$Ecotype_id)
+
+for (Acc in unique(names(Y_))) {
+	ntimes=sum(rownames(Geno)==Acc)
+	Geno_AccExpanded=rep(SNP_dum[rownames(SNP_dum)==Acc,],ntimes)
+	Geno[rownames(Geno)==Acc,]=matrix(Geno_AccExpanded,nrow=ntimes,byrow=T)
+}
+
+for (Acc in unique(Y_$Ecotype_id)) {
+	ntimes=sum(rownames(Geno)==Acc)
+	Geno_AccExpanded=rep(SNP_Data[rownames(SNP_Data)==Acc,],ntimes)
+	Geno[rownames(Geno)==Acc,]=matrix(Geno_AccExpanded,nrow=ntimes,byrow=T)
+}
+
+
+
+#########################################################
+#########################################################
+
+#Subset according to Planting ValenciaFall2006
+Accessions=read.csv("1001genomes_accessions.csv")
+load("FIBR_1001genomes_SNPs_freqfiltered.RData")
+load("Multitrait.RData")
+library(dplyr)
+
+Data=na.omit(Data)
+Data=Data[!Data$Ecotype_id=="no_match",]
+sum(Data$Ecotype_id=="no_match") #should equal zero
+sum(is.na(Data)) #should equal zero
+
+
+Y_=Data[as.character(Data$Planting)=="ValenciaFall2006","DTB"]
+names(Y_)=Data[as.character(Data$Planting)=="ValenciaFall2006","Ecotype_id"]
+Y_=na.omit(Y_)
+Y_=Y_[names(Y_)%in% Accessions$tg_ecotypeid] #Subset of Y_ whose names are also in the accession ecotype id
+
+SNP_Data=t(SNP_Data)
+
+rownames(SNP_Data) = gsub("X", "", rownames(SNP_Data))
+
+
+
+
+
+Geno=matrix(NA,nrow=length(Y_),ncol=ncol(SNP_Data))
+rownames(Geno)=names(Y_)
+colnames(Geno)=colnames(SNP_Data)
+
+
+for (Acc in unique(names(Y_))) {
+	ntimes=sum(rownames(SNP_Data)==Acc)
+	Geno_AccExpanded=rep(SNP_Data[rownames(SNP_Data)==Acc,],ntimes)
+	Geno[rownames(Geno)==Acc,]=matrix(Geno_AccExpanded,nrow=ntimes,byrow=T)
+}
+
+
+Geno_order=order(rownames(Geno))
+Geno=Geno[Geno_order,]
+
+
+
+#####
+Accessions_in=Accessions[Accessions$tg_ecotypeid %in% rownames(Geno),] #Subset of data whose ecotype IDs match those found in Geno
+
+Accession_data=matrix(NA,nrow=nrow(Geno),ncol=ncol(Accessions)) #Empty matrix to store results in
+rownames(Accessions_in)=Accessions_in$tg_ecotypeid
+rownames(Accession_data)=rownames(Geno)
+colnames(Accession_data)=colnames(Accessions)
+
+##Filling it up##
+for (Acc in (Accessions_in$tg_ecotypeid)) {
+	ntimes=sum(rownames(Accession_data)==Acc)
+	Acc_AccExpanded=unlist(rep(Accessions_in[Accessions_in$tg_ecotypeid==Acc,],ntimes))
+	Accession_data[rownames(Accession_data)==Acc,]= matrix(Acc_AccExpanded,nrow=ntimes,byrow=T)
+}
+
+Y_=matrix(Y_)
+colnames(Y_)="DTB"
+
+Geno=cbind(Y_,Accession_data,Geno)
+
+
+
+
+####Performing Principal Component Analysis###
+
+pca.train <-Geno[1:30,2:7] #training set
+pca.test <- Geno[-(31:33,2:7] #testing set
+
+prin_comp <- prcomp(pca.train, scale. = T) # scale.=T scales the data so standard deviation = 1
+
+
+biplot(prin_comp, scale = 0) #Plot principal components
+#compute standard deviation of each principal component
+std_dev <- prin_comp$sdev
+
+#compute variance
+pr_vpr_var <- std_dev^2
+
+#proportion of variance explained
+prop_varex <- pr_var/sum(pr_var)
+plot(cumsum(prop_varex), xlab = "Principal Component",
+              ylab = "Cumulative Proportion of Variance Explained",
+              type = "b")
+
+
+
+
+
+
+##Raster Example with max temp##
+tmax <- raster(paste(getwd(), "/Bioclim/bio10.bil", sep = ""))
+tmax[tmax>1000]=NA
+#Divide by 10 because data has been recorded in decimals
+tmax=tmax/10
+points(Geno$latitude~Geno$longitude,col="#d81c45",pch=19) # plot the points
+main="Location of Origin for Accessions planted in ValenciaFall2006"
+plot(tmax, main="Location of Origin ValenciaFall2006")
+
+####
+
+
+
+
+
+
+

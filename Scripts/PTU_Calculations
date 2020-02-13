@@ -1,0 +1,93 @@
+## Calculating the total amount of ptus accumulated until bolting
+
+
+#######################
+
+setwd("~/Clim_GWAS/Clim_GWAS_2")
+load('full_environ_data_list.Robj') #load environmental data
+
+seasons=c("HalleFall2006","NorwichSpring2007","NorwichSummer2006","NorwichSummer2007","OuluFall2007","ValenciaFall2006","NorwichFall2006")
+daylengths=c("short","long","long","long","long","short","short","short") #I'm assuming summer & spring = long, fall = short
+envs=c(3,5,6,7,8,10,4)
+names(environ_data)[c(3,5,6,7,8,10,4)]
+
+
+
+site_ptus = do.call(rbind, lapply(1:length(envs), function(i){
+  
+  #i=1
+  env = environ_data[[envs[i]]] #load corresponding environmental data file
+  
+  env$TT = with(env,pmax(Grnd.Tmp-3,0)) #thermal time
+  env$PTT = with(env,pmax(Grnd.Tmp - 3,0)*Hrs.light) #photothermal time
+  env$cumPTT = cumsum(env$PTT) #accumulated thermal time
+  
+  #env$daylength=daylengths[i]
+  env$season=seasons[i]
+  env$hour = seq(1:nrow(env))
+  env$day=floor(env$hour/24) #get days since sowing
+  
+  envhrs = do.call(rbind, lapply(1:nrow(env), function(j){
+    #j=1
+    if(env$Daylength[j]>=12){"long"} else {"short"}
+  }))
+  env$daylength = as.vector(envhrs)
+  env
+}))
+
+########################
+load("AllPlantings_Corrected.RData")
+
+
+site_ptus_at_hour1=site_ptus[site_ptus$Hour.in.Day==1,]
+cumPTTs=matrix(nrow=nrow(AllPlantings_Corrected),ncol=3)
+cumPTTs=data.frame(cumPTTs)
+cumPTTs[,1]=AllPlantings_Corrected[,3]
+colnames(cumPTTs)[1]="Planting"
+
+cumPTTs[,2]=AllPlantings_Corrected$DTB
+colnames(cumPTTs)[2]="DTB"
+cumPTTs[cumPTTs$Planting=="OuluFall2007",3]=cumPTTs[cumPTTs$Planting=="OuluFall2007",2]
+colnames(cumPTTs)[3]="cumPTT_atbolting"
+
+#### Calculating cumulative PTUs
+d=unique(cumPTTs$Planting)
+d=d[d!="OuluFall2007"]
+for (i in d)
+for (j in cumPTTs$DTB){ {
+
+#First select only the ptus for one planting
+	a=site_ptus_at_hour1[site_ptus_at_hour1$season==i,]
+#Then find the first day of the planting
+	firstday=a$Date[1]
+##Then find the cumPTT at bolting (assuming that cumPTT equals to the amount at hour 1 of the day they bolt)
+	cumPTT_atbolting=a[a$Date==(firstday+j),11]
+	cumPTTs[cumPTTs$Planting==i&cumPTTs$DTB==j,3]=cumPTT_atbolting
+}}
+
+AllPlantings_Corrected_cumPTTBolt=cbind(AllPlantings_Corrected[,c(1:14)],cumPTTs[,3],AllPlantings_Corrected[,-c(1:14)])
+colnames(AllPlantings_ptu)[15]="cumPTT"
+save(AllPlantings_Corrected_cumPTTBolt,file="AllPlantings_Corrected_cumPTTBolt.RData")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,68 @@
+setwd("~/Clim_GWAS/Clim_GWAS_2")
+
+Accessions=read.csv("IDs.csv")
+load("FIBR_SNP_filtered.RData")
+load("Multitrait.RData")
+
+
+
+############################################################
+SNP_data=t(SNP_data)
+rownames(SNP_data) = gsub("X", "", rownames(SNP_data))
+############################################################
+
+
+
+Y_=Data
+Y_=na.omit(Y_)
+Y_=Y_[!Y_$Ecotype_id=="no_match",] #Removes rows with ecotype id = no_match
+sum(Y_$Ecotype_id=="no_match") #should equal zero if all no_match has been removed
+Y_=Y_[order(Y_$Ecotype_id),]
+Y_=Y_[Y_$Ecotype_id %in% Accessions,]
+
+############################################################
+
+#Conforming SNP Data with Trait Data 
+
+Geno=matrix(NA,nrow=nrow(Y_),ncol=ncol(SNP_data))
+rownames(Geno)=(Y_$Ecotype_id)
+Geno=Geno[order(rownames(Geno)),]
+Y_=Y_[order(Y_$Ecotype_id),]
+
+
+for (Acc in unique(Y_$Ecotype_id)) {
+	ntimes=sum(rownames(Geno)==Acc)
+	Geno_AccExpanded=rep(SNP_data[rownames(SNP_data)==Acc,],ntimes)
+	Geno[rownames(Geno)==Acc,]=matrix(Geno_AccExpanded,byrow=T)
+}
+
+colnames(Geno)=colnames(SNP_data)
+
+#############################################################
+
+AllPlantings_Corrected=cbind(Y_,Geno)
+
+
+#########################################################
+#########################################################
+#Conforming SNP Data with Accession Info
+
+Accessions_info=read.csv("1001genomes_accessions.csv")
+
+
+Accessions_info_matrix=matrix(nrow=nrow(AllPlantings_Corrected),ncol=ncol(Accessions_info))
+colnames(Accessions_info_matrix)=colnames(Accessions_info)
+Accessions_info_matrix[,1]=as.numeric(as.character(AllPlantings_Corrected$Ecotype_id))
+Accessions_info_matrix=data.frame(Accessions_info_matrix)
+
+for (i in 1:nrow(Accessions_info_matrix)) {
+
+	Accessions_info_matrix[i,]=Accessions_info[Accessions_info$tg_ecotypeid==(Accessions_info_matrix[i,1]),]
+}
+
+##########################################################
+
+
+AllPlantings_Corrected=cbind(AllPlantings_Corrected[,1:6],Accessions_info_matrix,AllPlantings_Corrected[,-c(1:6)])
+
+save(AllPlantings_Corrected,file="AllPlantings_Corrected.RData")

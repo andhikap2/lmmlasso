@@ -1,0 +1,157 @@
+
+
+
+
+
+
+
+Betas=c()
+
+for (i in (unique(AllPlantings_named$Planting))){
+	names=names(eval(as.name(paste0("Beta_",i))))
+	Betas=c(Betas,names)
+	}
+
+
+lasso_cv <- cv.glmnet(x=data.matrix(AllPlantings_unique[,-c(1:14)]),y=data.matrix(AllPlantings_unique$DTB), alpha = 1,lambda=lambdas_to_try, nfolds=10)
+lasso_lambda<- lasso_cv$lambda.min
+
+AllPlantingsuniquefolds=createFolds(rownames(AllPlantings_unique),10) #You need to create the folds only once
+
+AllPlantings_unique_R2_exp=c()
+AllPlantings_unique_R2_pred=c()
+
+for (i in unique(AllPlantingsuniquefolds)){
+	
+	AllPlantings_unique_Valid=AllPlantings_unique[i,] #Validation set
+	AllPlantings_unique_Train=AllPlantings_unique[-i,] #Training set
+	DTB_Valid=AllPlantings_unique[i,"DTB"] #Validation set
+	DTB_Train=AllPlantings_unique[-i,"DTB"] #Training set
+
+	AllPlantings_unique_trainedmodel<- glmnet(x=data.matrix(AllPlantings_unique_Train[,-c(1:14)]),y=data.matrix(DTB_Train),alpha=1,lambda=lasso_lambda)
+	DTB_hat_train=predict(AllPlantings_unique_trainedmodel,newx=data.matrix(AllPlantings_unique_Train[,-c(1:14)]))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+	AllPlantings_unique_R2_exp=c(AllPlantings_unique_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(AllPlantings_unique_trainedmodel,newx=(data.matrix(AllPlantings_unique_Valid[,-c(1:14)])))
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+	AllPlantings_unique_R2_pred=c(AllPlantings_unique_R2_pred,correlation)
+}
+
+
+##Training all models using only their unique SNPs
+
+library(caret)
+library(glmnet)
+library(lme4)
+load("AllPlantings_Named_2.RData")
+
+for (i in unique(AllPlantings_named$Planting)) {
+
+	assign(paste0("",i),AllPlantings_named[AllPlantings_named$Planting==i,])
+}
+
+
+for (i in (unique(AllPlantings_named$Planting))){
+		
+
+
+	assign(paste0(i,"_unique"), (cbind(
+				(data.matrix(eval(as.name(paste0(i)))[,1:14])), (data.matrix(eval(as.name(paste0(i)))[,names(eval(as.name(paste0("Beta_",i))))]))
+				)))
+	lambdas_to_try <- seq(0, 1, length.out = 100)
+	lasso_cv <- cv.glmnet(x=(data.matrix(eval(as.name(paste0(i,"_unique")))[,-c(1:14)])),y=(data.matrix(eval(as.name(paste0(i)))[,"DTB"])), alpha = 1,lambda=lambdas_to_try, nfolds=10)
+
+	lasso_lambda<- lasso_cv$lambda.min
+	y =data.matrix(eval(as.name(paste0(i,"_unique")))) 
+	row.names(y) = 1:nrow(y)	
+	
+	assign(paste0(i,"_uniquefolds"), createFolds(rownames(y),10))
+
+	assign(paste0(i,"unique_R2_exp"),c())
+	assign(paste0(i,"unique_R2_pred"),c())
+
+
+for (j in unique(data.matrix(eval(as.name(paste0(i,"_uniquefolds")))))){
+			AllPlantings_unique_Valid=data.matrix((data.matrix(eval(as.name(paste0(i,"_unique")))))[j,]) #Validation set
+			AllPlantings_unique_Train=(data.matrix(eval(as.name(paste0(i,"_unique")))))[-j,] #Training set
+			DTB_Valid=(data.matrix(eval(as.name(paste0(i,"_unique")))))[j,"DTB"] #Validation set
+			DTB_Train=(data.matrix(eval(as.name(paste0(i,"_unique")))))[-j,"DTB"] #Training set
+
+			AllPlantings_unique_trainedmodel<- glmnet(x=data.matrix(AllPlantings_unique_Train[,-c(1:14)]),y=data.matrix(DTB_Train),alpha=1,lambda=lasso_lambda)
+			DTB_hat_train=predict(AllPlantings_unique_trainedmodel,newx=data.matrix(AllPlantings_unique_Train[,-c(1:14)]))
+			corr_exp=cor(DTB_hat_train,DTB_Train)
+			(assign(paste0(i,"unique_R2_exp"), (c(eval(as.name(paste0(i,"unique_R2_exp"))),corr_exp))))
+
+	
+
+			DTB_hat_valid=predict(AllPlantings_unique_trainedmodel,newx=data.matrix(AllPlantings_unique_Valid[,-c(1:14)]))
+			correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+			(assign(paste0(i,"unique_R2_pred"), (c(eval(as.name(paste0(i,"unique_R2_pred"))),correlation))))
+
+}}
+
+
+
+
+
+
+##Predicting using lmer
+
+
+
+for (i in (unique(AllPlantings_named$Planting))){
+		
+
+
+	assign(paste0(i,"_unique"), (cbind(
+				(data.matrix(eval(as.name(paste0(i)))[,1:14])), (data.matrix(eval(as.name(paste0(i)))[,names(eval(as.name(paste0("Beta_",i))))]))
+				)))
+	lmermodel=lmer(x=(data.matrix(eval(as.name(paste0(i,"_unique")))[,-c(1:14)])),y=(data.matrix(eval(as.name(paste0(i)))[,"DTB"])))
+
+	y =data.matrix(eval(as.name(paste0(i,"_unique")))) 
+	row.names(y) = 1:nrow(y)	
+	
+	assign(paste0(i,"_uniquefolds"), createFolds(rownames(y),10))
+
+	assign(paste0(i,"unique_R2_exp"),c())
+	assign(paste0(i,"unique_R2_pred"),c())
+
+
+for (j in unique(data.matrix(eval(as.name(paste0(i,"_uniquefolds")))))){
+			
+			AllPlantings_unique_Valid=data.matrix((data.matrix(eval(as.name(paste0(i,"_unique")))))[j,]) #Validation set
+			AllPlantings_unique_Train=(data.matrix(eval(as.name(paste0(i,"_unique")))))[-j,] #Training set
+			DTB_Valid=(data.matrix(eval(as.name(paste0(i,"_unique")))))[j,"DTB"] #Validation set
+			DTB_Train=(data.matrix(eval(as.name(paste0(i,"_unique")))))[-j,"DTB"] #Training set
+
+			AllPlantings_unique_trainedmodel<- lm(formula= DTB~ 1 + . ,data=as.data.frame(AllPlantings_unique_Train[,-c(1:3,5:14)])) #if you used lmer you'd need to specify random effects. if you used lm you had sinfularities
+			DTB_hat_train=predict(AllPlantings_unique_trainedmodel,newx=as.data.frame(AllPlantings_unique_Train[,-c(1:14)]))
+			corr_exp=cor(DTB_hat_train,DTB_Train)
+			(assign(paste0(i,"unique_R2_exp"), (c(eval(as.name(paste0(i,"unique_R2_exp"))),corr_exp))))
+
+	
+
+			DTB_hat_valid=predict(AllPlantings_unique_trainedmodel,newdata=(as.data.frame(AllPlantings_unique_Valid[,-c(1:14)])))
+			correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+			(assign(paste0(i,"unique_R2_pred"), (c(eval(as.name(paste0(i,"unique_R2_pred"))),correlation))))
+
+}}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

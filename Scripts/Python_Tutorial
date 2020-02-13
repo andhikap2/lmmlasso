@@ -1,0 +1,109 @@
+# scipy
+import scipy
+print('scipy: {}'.format(scipy.__version__))
+# numpy
+import numpy
+print('numpy: {}'.format(numpy.__version__))
+# matplotlib
+import matplotlib
+print('matplotlib: {}'.format(matplotlib.__version__))
+# pandas
+import pandas
+print('pandas: {}'.format(pandas.__version__))
+# scikit-learn
+import sklearn
+print('sklearn: {}'.format(sklearn.__version__))
+
+
+print(dataset.groupby('petal-length').size()) ##Gives number of rows belonging to each class. size() argument must be added to give counts otherwise error??
+
+
+	
+# box and whisker plots
+dataset.plot(kind='box', subplots=True, layout=(2,2), sharex=False, sharey=False) ##layout determines dimensions of graph, sharex=TRUE means they share the same x-axis scale. subplot=FALSE plots results into one 'box.'
+plt.show()
+
+
+	
+# histograms
+dataset.hist()
+plt.show()
+
+	
+# scatter plot matrix
+scatter_matrix(dataset)
+plt.show() #Petal length and petal width seem to be highly correlated
+
+# Split-out validation dataset
+array = dataset.values #Creates an object containing only the dataset values but NO row or column names
+
+X = array[:,0:4] #takes the first 4 columns of the 'array' object
+Y = array[:,4] #takes the 4th column only containing species names
+validation_size = 0.20 #size of validation set is 20%
+seed = 7 #sets a seed for the random number generator
+X_train, X_validation, Y_train, Y_validation = model_selection.train_test_split(X, Y, test_size=validation_size, random_state=seed)
+
+# Test options and evaluation metric
+seed = 7
+scoring = 'accuracy'
+
+
+#Spot check algorithms??
+models = []
+models.append(('LR', LogisticRegression(solver='liblinear', multi_class='ovr'))) ######## LR is a name????
+models.append(('LDA', LinearDiscriminantAnalysis()))
+models.append(('KNN', KNeighborsClassifier()))
+models.append(('CART', DecisionTreeClassifier()))
+models.append(('NB', GaussianNB()))
+models.append(('SVM', SVC(gamma='auto')))
+
+
+
+
+
+
+results = []
+names = []
+
+#Evaluate each model in turn
+
+for name, model in models: #??????????????????????????????????????
+	kfold = model_selection.KFold(n_splits=10, random_state=seed)
+	cv_results = model_selection.cross_val_score(model, X_train, Y_train, cv=kfold, scoring=scoring)
+	results.append(cv_results)
+	names.append(name)
+	msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
+	print(msg)
+
+#Compare algorithms
+fig = plt.figure() #What
+fig.suptitle('Algorithm Comparison') #####????????
+ax = fig.add_subplot(111) ################ What
+plt.boxplot(results) #What
+ax.set_xticklabels(names) #What
+plt.show()
+
+# Make predictions on validation dataset
+knn = KNeighborsClassifier()
+knn.fit(X_train, Y_train)
+predictions = knn.predict(X_validation)
+print(accuracy_score(Y_validation, predictions))
+print(confusion_matrix(Y_validation, predictions)) #in a confusion matrix the diagonals are correctly-classified data and the rest are incorrectly classified
+print(classification_report(Y_validation, predictions))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

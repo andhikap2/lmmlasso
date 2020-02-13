@@ -1,0 +1,188 @@
+#### Making microenvironmental variables
+
+
+setwd("~/Clim_GWAS/Clim_GWAS_2")
+load('full_environ_data_list.Robj') #load environmental data
+
+seasons=c("HalleFall2006","NorwichSpring2007","NorwichSummer2006","NorwichSummer2007","OuluFall2007","ValenciaFall2006","NorwichFall2006")
+daylengths=c("short","long","long","long","long","short","short","short") #I'm assuming summer & spring = long, fall = short
+envs=c(3,5,6,7,8,10,4)
+names(environ_data)[c(3,5,6,7,8,10,4)]
+
+
+
+site_ptus = do.call(rbind, lapply(1:length(envs), function(i){
+  
+  #i=1
+  env = environ_data[[envs[i]]] #load corresponding environmental data file
+  
+  env$TT = with(env,pmax(Grnd.Tmp-3,0)) #thermal time
+  env$PTT = with(env,pmax(Grnd.Tmp - 3,0)*Hrs.light) #photothermal time
+  env$cumPTT = cumsum(env$PTT) #accumulated thermal time
+  
+  #env$daylength=daylengths[i]
+  env$season=seasons[i]
+  env$hour = seq(1:nrow(env))
+  env$day=floor(env$hour/24) #get days since sowing
+  
+  envhrs = do.call(rbind, lapply(1:nrow(env), function(j){
+    #j=1
+    if(env$Daylength[j]>=12){"long"} else {"short"}
+  }))
+  env$daylength = as.vector(envhrs)
+  env
+}))
+
+
+###################################################################################################################################
+
+
+
+
+
+
+
+
+
+
+
+#Separating microclimate data into each planting
+for (i in unique(site_ptus$season)){
+	assign(paste0(i,"_site_ptus"),site_ptus[site_ptus$season==i,])
+}
+
+#############################################
+
+
+##Getting hourly microclim values for all plantings at once
+for (a in unique(site_ptus$season)){
+
+assign(paste0(a,"_microclim"),matrix(NA,nrow=3,ncol=nrow(eval(as.name(paste0(a,"_site_ptus"))))))
+y=data.frame(eval(as.name(paste0(a,"_microclim"))))
+rownames(y)=c("Grnd.Tmp","cumPTT","daylength")
+
+ndays=203
+
+colnameslist=c()
+
+
+for (i in 1:ndays)
+for(j in 1:24){{
+column_name=paste0("Day",i,"Hour",j)
+colnameslist=c(colnameslist,column_name)
+
+}}
+
+
+colnames(y)=colnameslist
+
+#Filling up ground temp
+ground_temp=eval(as.name(paste0(a,"_site_ptus")))$Grnd.Tmp
+y[1,]=ground_temp
+
+#Filling up cumPTT
+cumulative_PTT=eval(as.name(paste0(a,"_site_ptus")))$cumPTT
+y[2,]=cumulative_PTT
+
+#filling up daylength
+day_lengths=eval(as.name(paste0(a,"_site_ptus")))$daylength
+y[3,]=day_lengths
+
+y=y[!is.na(names(y))]
+assign(paste0(a,"_microclim"),y)
+
+}
+
+
+
+## Creating a matrix of individual values
+
+
+########################## 
+
+##Making a function?
+
+#Creating matrices
+
+create_matrix=function(x) {
+	a=matrix(NA,nrow=1,ncol=(nrow(eval(as.name(paste0(x,"_microclim"))))*ncol(eval(as.name(paste0(x,"_microclim"))))))
+	a=data.frame(a)
+	assign(paste0(x,"_microclimvalues"),a,envir=.GlobalEnv)
+}
+
+season=data.frame(seasons)
+for (i in unique(season)){
+results=apply(unique(season),1,create_matrix)
+}
+
+#Assigning column names
+for (i in unique(seasons)){
+	a_colnameslist=c()
+for (j in rownames(eval(as.name(paste0(i,"_microclim")))))
+for (k in colnames(eval(as.name(paste0(i,"_microclim"))))){{
+
+
+	a_colname=paste0(j,"_",k)
+	a_colnameslist=c(a_colnameslist,a_colname)
+
+
+	}
+	d=get(paste0(i,"_microclimvalues"))
+	colnames(d)=a_colnameslist
+	assign(paste0(i,"_microclimvalues"),d)
+	
+	}}
+
+
+
+
+####################
+
+for (i in unique(seasons)) {
+	values=c(eval(as.name(paste0(i,"_microclim")))["Grnd.Tmp",],eval(as.name(paste0(i,"_microclim")))["cumPTT",],eval(as.name(paste0(i,"_microclim")))["daylength",])
+	b=eval(as.name(paste0(i,"_microclimvalues")))
+	b[]=values
+	assign(paste0(i,"_microclimvalues"),b)	
+}
+
+
+#### Combining with genetic data
+
+
+
+load("AllPlantings_Corrected.RData")
+AllPlantings_Corrected=data.frame(AllPlantings_Corrected)
+for (i in unique(AllPlantings_Corrected$Planting)) {
+
+	assign(paste0("",i),AllPlantings_Corrected[AllPlantings_Corrected$Planting==i,])
+}
+###################################
+
+for (i in unique(seasons)){
+
+empty_matrix=matrix(NA,nrow=nrow(eval(as.name(paste0(i)))),ncol=ncol(eval(as.name(paste0(i,"_microclimvalues")))))
+empty_matrix=data.frame(empty_matrix)
+colnames(empty_matrix)=colnames(eval(as.name(paste0(i,"_microclimvalues"))))
+for (j in 1:ncol(empty_matrix)){
+	empty_matrix[,j]=eval(as.name(paste0(i,"_microclimvalues")))[,j]
+
+}
+assign(paste0(i,"_emptymatrix"),empty_matrix)
+}
+
+####################################
+for (i in unique(seasons)){
+
+	g=cbind(eval(as.name(paste0(i))),eval(as.name(paste0(i,"_emptymatrix"))))
+	assign(paste0(i,"_hourly_env"),g)
+}
+
+
+AllPlantings_Corrected_hourly_env=rbind(HalleFall2006_hourly_env,NorwichFall2006_hourly_env,NorwichSpring2007_hourly_env,NorwichSummer2006_hourly_env,NorwichSummer2007_hourly_env,OuluFall2007_hourly_env,ValenciaFall2006_hourly_env)
+
+save(AllPlantings_Corrected_hourly_env,file="AllPlantings_Corrected_hourly_env203.RData")
+####################################
+
+
+
+

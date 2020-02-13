@@ -1,0 +1,63 @@
+
+#NorwichSummer2006#####################
+################################### 
+#### Create a dataset with only SNPs and DTB
+load("NorwichSummer2006.RData")
+
+rownames(NorwichSummer2006)=NULL 
+NorwichSummer2006_R2_exp=c()
+NorwichSummer2006_R2_pred=c()
+for (i in unique(NorwichSummer2006folds)){
+	
+	NorwichSummer2006_Valid=NorwichSummer2006[i,] #Validation set
+	NorwichSummer2006_Train=NorwichSummer2006[-i,] #Training set
+	DTB_Valid=NorwichSummer2006[i,"DTB"] #Validation set
+	DTB_Train=NorwichSummer2006[-i,"DTB"] #Training set
+
+
+	models=plsr(DTB_Train~as.matrix(NorwichSummer2006_Train[,-c(1:14)]),ncomp=5)
+	DTB_hat_train=predict(models,newx=as.matrix(NorwichSummer2006_Train[,-c(1:14)]))
+	DTB_hat_train=DTB_hat_train[,,3] #Take predicted values for three components
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+	NorwichSummer2006_R2_exp=c(NorwichSummer2006_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(models,newdata=(as.matrix(NorwichSummer2006_Valid[,-c(1:14)])))
+	DTB_hat_valid=DTB_hat_valid[,,3] #Take predicted values for 3 components
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+	NorwichSummer2006_R2_pred=c(NorwichSummer2006_R2_pred,correlation)
+}
+
+models=plsr(as.matrix(HalleFall2006[-HalleFall2006folds$Fold01,"DTB"])~as.matrix((HalleFall2006[-HalleFall2006folds$Fold01,-c(1:14)])),ncomp=5)
+
+
+#Pararrelization for cross-validation
+pls.options(parallel = 4) # Use mclapply with 4 CPUs
+
+ ncomp.onesigma <- selectNcomp(gas2, method = "onesigma", plot = TRUE)
+
+
+
+
+rownames(HalleFall2006)=NULL 
+HalleFall2006_R2_exp=c()
+HalleFall2006_R2_pred=c()
+for (i in unique(HalleFall2006folds)){
+	
+	HalleFall2006_Valid=HalleFall2006[i,] #Validation set
+	HalleFall2006_Train=HalleFall2006[-i,] #Training set
+	DTB_Valid=HalleFall2006[i,"DTB"] #Validation set
+	DTB_Train=HalleFall2006[-i,"DTB"] #Training set
+
+
+	models=plsr(DTB_Train~as.matrix(HalleFall2006_Train[,-c(1:14)]),ncomp=5)
+	DTB_hat_train=predict(models,newx=as.matrix(HalleFall2006_Train[,-c(1:14)]))
+	DTB_hat_train=DTB_hat_train[,,3] #Take predicted values for three components
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+	HalleFall2006_R2_exp=c(HalleFall2006_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(models,newdata=(as.matrix(HalleFall2006_Valid[,-c(1:14)])))
+	DTB_hat_valid=DTB_hat_valid[,,3] #Take predicted values for 3 components
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+	HalleFall2006_R2_pred=c(HalleFall2006_R2_pred,correlation)
+}
+

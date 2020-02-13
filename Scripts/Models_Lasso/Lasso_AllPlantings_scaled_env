@@ -1,0 +1,69 @@
+#Lasso taking into account environmental variables and the interactions between them (scaled by scale())
+library(glmnet)
+library(caret)
+load("AllPlantings_scaled.RData")
+
+for (i in unique(AllPlantings_scaled_int$Planting)) {
+
+	assign(paste0("",i),AllPlantings_scaled_int[AllPlantings_scaled_int$Planting==i,])
+}
+
+
+
+#Determining range of lambdas to test
+lasso_cv <- cv.glmnet(x=as.matrix(HalleFall2006[,-c(1:14)]),y=as.matrix(HalleFall2006$SeedNum), alpha = 0.001, nfolds=10)
+HalleFall2006lasso_lambda<- lasso_cv$lambda.min
+
+## Finding % variance explained by model
+
+model = glmnet(x=as.matrix(HalleFall2006[,-c(1:14)]),y=as.matrix(HalleFall2006$SeedNum), alpha = 0.001,lambda=HalleFall2006lasso_lambda)
+predictions=predict(model,newx=as.matrix(HalleFall2006[,-c(1:14)]))
+percentage_exp=cor(predictions,HalleFall2006$SeedNum)
+print(percentage_exp)
+###################
+gc()
+
+
+
+
+#lasso regression (+ environmental variables)
+HalleFall2006_R2_pred=c()
+HalleFall2006_R2_exp=c()
+rownames(HalleFall2006)=NULL 
+HalleFall2006folds=createFolds(rownames(HalleFall2006),10) #You need to create the folds only once
+
+for (i in unique(HalleFall2006folds)){
+	
+	HalleFall2006_Valid=HalleFall2006[i,] #Validation set
+	HalleFall2006_Train=HalleFall2006[-i,] #Training set
+	SeedNum_Valid=HalleFall2006[i,"SeedNum"] #Validation set
+	SeedNum_Train=HalleFall2006[-i,"SeedNum"] #Training set
+
+	HalleFall2006elasticnet0.001_trainedmodel<- glmnet(x=as.matrix(HalleFall2006_Train[,-c(1:14)]),y=as.matrix(SeedNum_Train),alpha=0.001,lambda=HalleFall2006lasso_lambda)
+	SeedNum_hat_train=predict(HalleFall2006elasticnet0.001_trainedmodel,newx=as.matrix(HalleFall2006_Train[,-c(1:14)]))
+	corr_exp=cor(SeedNum_hat_train,SeedNum_Train)
+	HalleFall2006_R2_exp=c(HalleFall2006_R2_exp,corr_exp) #Measures explanatory value
+
+	SeedNum_hat_valid=predict(HalleFall2006elasticnet0.001_trainedmodel,newx=(as.matrix(HalleFall2006_Valid[,-c(1:14)])))
+	correlation=cor(SeedNum_hat_valid,SeedNum_Valid) #Measures predictive value
+	HalleFall2006_R2_pred=c(HalleFall2006_R2_pred,correlation)
+}
+
+HalleFall2006_elasticnet0.001_SeedNum_model=HalleFall2006elasticnet0.001_trainedmodel
+save(HalleFall2006_elasticnet0.001_SeedNum_model,file="HalleFall2006_elasticnet0.001_SeedNum_model.RData")
+
+HalleFall2006_R2_pred
+range(HalleFall2006_R2_pred)
+mean(HalleFall2006_R2_pred)
+range(HalleFall2006_R2_exp)
+
+Beta_HalleFall2006=HalleFall2006elasticnet0.001_trainedmodel$beta[,HalleFall2006elasticnet0.001_trainedmodel$dev.ratio==max(HalleFall2006elasticnet0.001_trainedmodel$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of null deviance is
+
+Beta_HalleFall2006=Beta_HalleFall2006[Beta_HalleFall2006!=0] # Retain only non-zero coefficients
+length(Beta_HalleFall2006)
+Beta_HalleFall2006[1:100]
+
+
+
+
+

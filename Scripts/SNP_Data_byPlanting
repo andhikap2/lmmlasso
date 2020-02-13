@@ -1,0 +1,82 @@
+
+Accessions=read.csv("1001genomes_accessions.csv")
+load("FIBR_1001genomes_SNPs_freqfiltered.RData")
+load("Multitrait.RData")
+
+
+Data=na.omit(Data)
+Data=Data[!Data$Ecotype_id=="no_match",]
+Accessions=na.omit(Accessions)
+
+SNP_Data=t(SNP_Data)
+rownames(SNP_Data) = gsub("X", "", rownames(SNP_Data))
+
+############
+
+for (i in unique(Data$Planting)) {
+
+
+	Y_=Data[as.character(Data$Planting)==i,c("Planting","Ecotype_id","DTB","LfL","SeedNum")]
+	Y_=na.omit(Y_)
+	Y_=Y_[Y_$Ecotype_id%in% Accessions$tg_ecotypeid,] #Subset of Y_ whose ecotype ids are also in the accession ecotype id
+	Y_order=order(Y_$Ecotype_id)
+	Y_=Y_[Y_order,]
+
+	Geno=matrix(NA,nrow=nrow(Y_),ncol=ncol(SNP_Data))
+	colnames(Geno)=colnames(SNP_Data)
+	rownames(Geno)=Y_$Ecotype_id
+
+
+	for (Acc in unique(Y_$Ecotype_id)) {
+		ntimes=sum(rownames(Geno)==Acc)
+		Geno_AccExpanded=rep(SNP_Data[rownames(SNP_Data)==Acc,],ntimes)
+		Geno[rownames(Geno)==Acc,]=matrix(Geno_AccExpanded,nrow=ntimes,byrow=T)
+	}
+	
+
+
+	
+	#####
+	Accessions_in=Accessions[Accessions$tg_ecotypeid %in% rownames(Geno),] #Subset of data whose ecotype IDs match those found in Geno
+
+	Accession_data=matrix(NA,nrow=nrow(Geno),ncol=ncol(Accessions)) #Empty matrix to store results in
+	rownames(Accessions_in)=Accessions_in$tg_ecotypeid
+	rownames(Accession_data)=rownames(Geno)
+	colnames(Accession_data)=colnames(Accessions)
+
+##Filling it up##
+	for (Bcc in (Accessions_in$tg_ecotypeid)) {
+		ntimes=sum(rownames(Accession_data)==Bcc)
+		Acc_AccExpanded=unlist(rep(Accessions_in[Accessions_in$tg_ecotypeid==Bcc,],ntimes))
+		Accession_data[rownames(Accession_data)==Bcc,]= matrix(Acc_AccExpanded,nrow=ntimes,byrow=T)
+	}
+
+	Geno=cbind(Y_,Accession_data,Geno)
+
+	(assign(paste0("",i),Geno))
+
+}
+
+AllPlantings=rbind(HalleFall2006,NorwichSummer2006,NorwichFall2006,NorwichSpring2007,NorwichSummer2007,ValenciaFall2006,OuluFall2007)  # Combine all plantings into one matrix
+
+
+
+
+
+## Adding Ecotype names to the matrix
+EcotypeNames=matrix(NA,nrow=nrow(AllPlantings),ncol=1)
+rownames(EcotypeNames)=AllPlantings$Ecotype_id
+
+for (name in unique(AllPlantings$Ecotype_id)){
+	ntimes=sum(rownames(EcotypeNames)==name)
+	EcotypeNames_Expanded=(Data[Data$Ecotype_id==name,1])
+	EcotypeNames[rownames(EcotypeNames)==name,]=matrix(EcotypeNames_Expanded,nrow=ntimes,byrow=T)
+
+}
+	
+AllPlantings_named=cbind(EcotypeNames,AllPlantings)
+
+
+
+
+

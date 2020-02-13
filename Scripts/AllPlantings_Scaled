@@ -1,0 +1,79 @@
+
+library(raster)
+
+load("AllPlantings_Named_2.RData")
+
+Bioclim_all=AllPlantings_named$Ecotype_id
+
+
+for (i in 1:19) { 
+	Bioclim_var=paste(getwd(),"/Bioclim/bio",i,".bil", sep = "") #Extracts each of the 19 bioclim variables
+	Bioclim <- raster(Bioclim_var) #Create a raster object from Bioclim_var
+	Bioclim_vec=extract(Bioclim,AllPlantings_named[,c("longitude","latitude")]) #Extract the Bioclim values for each accession based on longitude/latitude 
+	Bioclim_all=cbind(Bioclim_all,Bioclim_vec) #Need to use cbind instead of c because it's a vector
+	rm(Bioclim)
+}
+
+
+colnames(Bioclim_all)=c("ecotype_id",paste("Bio",1:19,sep="")) #Names the columns, first column is ecotype_id the rest are Bio1,Bio2,etc.
+(Bioclim_all[,1])=NULL
+scaled_Bioclim_all=scale(Bioclim_all[,-1])
+
+
+#log transformations?
+logtransformed_Bioclim_all=-log(Bioclim_all)
+
+colnames(scaled_Bioclim_all)=c(paste0("Bio",1:19))
+AllPlantings_scaled=cbind(AllPlantings_named[,1:14],scaled_Bioclim_all,AllPlantings_named[,-c(1:14)])
+
+
+#### Unscaled
+AllPlantings_unscaled=cbind(AllPlantings_named[,1:14],BioClim.inter,AllPlantings_named[,-c(1:14)])
+
+
+
+AllPlantings_named_=cbind(AllPlantings_named[,1:14],Bioclim_all[,2:20],AllPlantings_named[,-c(1:14)])
+
+
+### Creating interaction terms
+
+Bioclim_all=Bioclim_all[,-1] # Removes the ecotype id column
+
+BioClim.inter=matrix(NA,ncol=0,nrow=nrow(Bioclim_all))
+for (i in 1:ncol(Bioclim_all)) {
+    BioClim.inter=cbind(BioClim.inter,Bioclim_all[,i]) #The single bioclim variable (no interaction)
+    BioClim.inter=cbind(BioClim.inter,apply(Bioclim_all[,1:ncol(Bioclim_all)],2,function(x) {x*Bioclim_all[,i]}))
+    
+
+
+#Apply a function that multiplies each bioclim variable by colum to create pairwise interactions
+}
+
+nameslist=c()
+	
+for (i in 1:19){
+for (j in 1:19){
+	namess=c(paste0("Bio",i),paste0("Bio",i,"Bio",j))
+	nameslist=c(nameslist,namess)
+}}
+
+nameslist=unique(nameslist)
+colnames(BioClim.inter)=nameslist
+logtransformed_BioClim.inter=-log(BioClim.inter)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

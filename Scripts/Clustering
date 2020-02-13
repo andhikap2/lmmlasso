@@ -1,0 +1,37 @@
+
+
+#Clustering by DTB
+
+clusters <- kmeans((rbind(HalleFall2006[,3],aNorwichFall2006[,3],aNorwichSpring2007[,3],aNorwichSummer2006[,3],aNorwichSummer2007[,3],aOuluFall2007[,3],aValenciaFall2006[,3])),4) ###
+
+
+
+
+
+autoplot(kmeans((rbind(HalleFall2006[,3],NorwichFall2006[,3],NorwichSpring2007[,3],NorwichSummer2006[,3],NorwichSummer2007[,3],OuluFall2007[,3],ValenciaFall2006[,3]),4),data=rbind(HalleFall2006[,3],NorwichFall2006[,3],NorwichSpring2007[,3],NorwichSummer2006[,3],NorwichSummer2007[,3],OuluFall2007[,3],ValenciaFall2006[,3])))
+
+bound=rbind(HalleFall2006[,3],HalleFall2006[,3],NorwichFall2006[,3],NorwichSpring2007[,3],NorwichSummer2006[,3],NorwichSummer2007[,3],OuluFall2007[,3],ValenciaFall2006[,3])
+
+
+
+
+
+
+### Hierarchical Clustering####
+###############################
+
+for (i in unique(Data$Planting)) {
+
+	(assign(paste0(i,"_sc"),as.data.frame(scale(paste0(i[,3:5])))))
+}
+
+## Distance Matrix ##
+dist_mat<-dist(rbind(HalleFall2006_sc,NorwichFall2006_sc,NorwichSpring2007_sc,NorwichSummer2006_sc,NorwichSummer2007_sc,OuluFall2007_sc,ValenciaFall2006_sc),method='euclidean')
+
+
+#Centroid linkage
+hclust_centroid<-hclust(dist_mat,method="centroid")
+plot(hclust_centroid)
+
+
+

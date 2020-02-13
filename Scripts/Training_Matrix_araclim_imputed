@@ -1,0 +1,107 @@
+library(glmnet)
+library(caret)
+load("AllPlantings_araclim_imputed_scaled.RData")
+AllPlantings_araclim_imputed_scaled=data.frame(AllPlantings_araclim_imputed_scaled)
+for (i in unique(AllPlantings_araclim_imputed_scaled$Planting)) {
+
+	assign(paste0("",i),AllPlantings_araclim_imputed_scaled[AllPlantings_araclim_imputed_scaled$Planting==i,])
+}
+
+Training_Matrix=matrix(NA,nrow=7,ncol=7)
+rownames(Training_Matrix)=unique(AllPlantings_araclim_imputed_scaled$Planting)
+colnames(Training_Matrix)=unique(AllPlantings_araclim_imputed_scaled$Planting)
+
+Training_Matrix1=Training_Matrix[1:2,]
+Training_Matrix2=Training_Matrix[3:5,]
+Training_Matrix3=Training_Matrix[6:7,]
+
+
+
+temp=list.files(pattern="*_elasticnet0.001_DTB_model_araclim_imputed.RData")
+lapply(temp,load,.GlobalEnv) # Loads file and saves into the global environment
+
+##Filling up Training_Matrix1
+
+
+for (i in rownames(Training_Matrix1)){
+
+	for (j in colnames(Training_Matrix1)){
+	
+	DTB_Valid=as.matrix(eval(as.name(paste0(j)))[,"DTB"]) #Validation set
+
+	DTB_hat_valid=predict(eval(as.name(paste0(i,"_elasticnet0.001_DTB_model_araclim_imputed"))),newx=as.matrix(eval(as.name(paste0(j)))[,-c(1:14)]))
+
+	predictions=cor(DTB_Valid,DTB_hat_valid)
+	Training_Matrix1[rownames(Training_Matrix1)==i,colnames(Training_Matrix1)==j]=predictions
+
+	}}
+
+
+
+
+######
+
+
+gc()
+
+
+######
+
+##Filling up Training_Matrix2
+
+
+for (i in rownames(Training_Matrix2)){
+
+	for (j in colnames(Training_Matrix2)){
+	
+	DTB_Valid=as.matrix(eval(as.name(paste0(j)))[,"DTB"]) #Validation set
+
+	DTB_hat_valid=predict(eval(as.name(paste0(i,"_elasticnet0.001_DTB_model_araclim_imputed"))),newx=as.matrix(eval(as.name(paste0(j)))[,-c(1:14)]))
+
+	predictions=cor(DTB_Valid,DTB_hat_valid)
+	Training_Matrix2[rownames(Training_Matrix2)==i,colnames(Training_Matrix2)==j]=predictions
+
+	}}
+#######
+gc()
+
+##Filling up Training_Matrix_3
+
+
+
+for (i in rownames(Training_Matrix3)){
+
+	for (j in colnames(Training_Matrix3)){
+	
+	DTB_Valid=as.matrix(eval(as.name(paste0(j)))[,"DTB"]) #Validation set
+
+	DTB_hat_valid=predict(eval(as.name(paste0(i,"_elasticnet0.001_DTB_model_araclim_imputed"))),newx=as.matrix(eval(as.name(paste0(j)))[,-c(1:14)]))
+
+	predictions=cor(DTB_Valid,DTB_hat_valid)
+	Training_Matrix3[rownames(Training_Matrix3)==i,colnames(Training_Matrix3)==j]=predictions
+
+	}}
+
+###
+
+
+Training_Matrix_DTB_araclim_imputed=rbind(Training_Matrix1,Training_Matrix2,Training_Matrix3)
+##
+
+
+#Loading multiple files at once
+
+
+save(Training_Matrix_DTB_araclim_imputed,file="Training_Matrix_DTB_araclim_imputed.RData")
+
+
+
+
+#split into three training matrices?
+
+
+
+
+
+
+

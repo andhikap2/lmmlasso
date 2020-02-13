@@ -1,0 +1,24 @@
+### Loading Bioclim variables
+
+library(raster)
+
+
+### Extract BIO1 (Annual Mean Temp.)
+meantemp<- raster(paste(getwd(),"/Bioclim/bio1.bil",sep= ""))
+
+
+### Extract BIO2 (Mean Diurnal Range)
+diurn_range<- raster(paste(getwd(),"/Bioclim/bio2.bil",sep= ""))
+
+### Extract BIO3 (Isothermality)
+isothermality<- raster(paste(getwd(),"/Bioclim/bio3.bil",sep= ""))
+
+### Extract BIO4 (Temperature Seasonality)
+temp_seasonality<- raster(paste(getwd(),"/Bioclim/bio4.bil",sep= ""))
+
+
+
+
+#Extract max temp. data
+tmax <- raster(paste(getwd(), "/Bioclim/bio10.bil", sep = ""))
+tmax[tmax>1000]=NA

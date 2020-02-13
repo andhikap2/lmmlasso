@@ -1,0 +1,65 @@
+library(glmnet)
+library(caret)
+load("AllPlantings_Named_2.RData")
+lambdas_to_try <- seq(0, 1, length.out = 100)
+
+
+for (i in unique(AllPlantings_named$Planting)) {
+
+	assign(paste0("",i),AllPlantings_named[AllPlantings_named$Planting==i,])
+}
+
+
+
+for (i in unique(AllPlantings_named$Planting)){
+
+	lasso_cv= cv.glmnet(x=data.matrix(eval(as.name(paste(i))))[,-c(1:14)],y=data.matrix(eval(as.name(paste(i))))[,"DTB"], alpha = 1,lambda=lambdas_to_try, nfolds=10)
+	lasso_lambda<- lasso_cv$lambda.min
+	assign(paste0(i,"_trainedmodel"),
+
+	glmnet(x=data.matrix(eval(as.name(paste(i))))[,-c(1:14)],y=data.matrix(eval(as.name(paste(i))))[,"DTB"], alpha = 1,lambda=lasso_lambda))
+	}
+
+
+save(HalleFall2006_trainedmodel,NorwichSummer2006_trainedmodel,NorwichFall2006_trainedmodel,NorwichSpring2007_trainedmodel,NorwichSummer2007_trainedmodel,ValenciaFall2006_trainedmodel,OuluFall2007_trainedmodel,
+file="AllModels.RData")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		glmnet(
+			x=as.matrix(eval(as.name(paste(i))[,-c(1:14)])),
+			y=as.matrix(eval(as.name(paste(i))[,"DTB"])),
+			alpha=1,lambda=lasso_lambda))
+
+}
+
+
+

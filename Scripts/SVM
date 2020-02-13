@@ -1,0 +1,46 @@
+library(e1071)
+library(caret)
+library(glmnet)
+
+
+load("AllPlantings_Named_2.RData")
+load("HalleFall2006.RData")
+
+
+	HalleFall2006_Valid=HalleFall2006[HalleFall2006folds$Fold01,] #Validation set
+	HalleFall2006_DTBValid=HalleFall2006[HalleFall2006folds$Fold01,"DTB"]
+	HalleFall2006_Train=HalleFall2006[-HalleFall2006folds$Fold01,] #Training set
+	HalleFall2006_DTBTrain=HalleFall2006[-HalleFall2006folds$Fold01,"DTB"]
+
+
+HalleFall2006_Valid_SNPs=HalleFall2006_Valid[,-c(1:14)]
+
+
+svm.model=svm(HalleFall2006_Valid$DTB~HalleFall2006_Valid_SNPs)
+DTBValid_hat=predict(svm.model,newx=HalleFall2006_Valid)
+
+HalleFall2006svm_R2_exp=c()
+HalleFall2006svm_R2_pred=c()
+
+for (i in unique(HalleFall2006folds)){
+
+	HalleFall2006_Valid=HalleFall2006[i,] #Validation set
+	HalleFall2006_DTBValid=HalleFall2006[i,"DTB"]
+	HalleFall2006_Train=HalleFall2006[-i,] #Training set
+	HalleFall2006_DTBTrain=HalleFall2006[-i,"DTB"]
+
+	HalleFall2006_Train_SNPs=HalleFall2006_Train[,-c(1:14)]
+	HalleFall2006_Valid_SNPs=HalleFall2006_Valid[,-c(1:14)]
+
+
+
+	HalleFall2006svm_trainedmodel=svm(HalleFall2006_Train$DTB~as.matrix(HalleFall2006_Train_SNPs))
+	DTB_hat_train=predict(HalleFall2006svm_trainedmodel,newx=as.matrix(HalleFall2006_Train_SNPs))
+	corr_exp=cor(DTB_hat_train,HalleFall2006_DTBTrain)
+	HalleFall2006svm_R2_exp=c(HalleFall2006svm_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(HalleFall2006svm_trainedmodel,newdata=as.matrix(HalleFall2006_Valid_SNPs))
+	correlation=cor(DTB_hat_valid,HalleFall2006_DTBValid) #Measures predictive value
+	HalleFall2006svm_R2_pred=c(HalleFall2006svm_R2_pred,correlation)
+
+}

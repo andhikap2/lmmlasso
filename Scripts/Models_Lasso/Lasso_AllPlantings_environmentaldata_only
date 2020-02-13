@@ -1,0 +1,79 @@
+#Lasso taking into account environmental variables and the interactions between them (scaled by scale())
+library(glmnet)
+library(caret)
+load("AllPlantings_araclim_imputed_scaled.RData")
+AllPlantings_araclim_imputed_scaled=data.frame(AllPlantings_araclim_imputed_scaled)
+for (i in unique(AllPlantings_araclim_imputed_scaled$Planting)) {
+
+	assign(paste0("",i),AllPlantings_araclim_imputed_scaled[AllPlantings_araclim_imputed_scaled$Planting==i,])
+}
+
+
+
+#Determining range of lambdas to test
+lasso_cv <- cv.glmnet(x=as.matrix(OuluFall2007[,15:21184]),y=as.matrix(OuluFall2007$DTB), alpha = 0.001, nfolds=10)
+OuluFall2007lasso_lambda<- lasso_cv$lambda.min
+
+## Finding % variance explained by model
+
+model = glmnet(x=as.matrix(OuluFall2007[,15:21184]),y=as.matrix(OuluFall2007$DTB), alpha = 0.001,lambda=OuluFall2007lasso_lambda)
+predictions=predict(model,newx=as.matrix(OuluFall2007[,15:21184]))
+percentage_exp=cor(predictions,OuluFall2007$DTB)
+print(percentage_exp)
+OuluFall2007_elasticnet0.001_DTB_model_araclim_imputed_envdataonly=model
+save(OuluFall2007_elasticnet0.001_DTB_model_araclim_imputed_envdataonly,file="OuluFall2007_elasticnet0.001_DTB_model_araclim_imputed_envdataonly.RData")
+
+
+Beta_OuluFall2007=OuluFall2007_elasticnet0.001_DTB_model_araclim_imputed_envdataonly$beta[,OuluFall2007_elasticnet0.001_DTB_model_araclim_imputed_envdataonly$dev.ratio==max(OuluFall2007_elasticnet0.001_DTB_model_araclim_imputed_envdataonly$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of nu
+
+Beta_OuluFall2007=Beta_OuluFall2007[Beta_OuluFall2007!=0] # Retain only non-zero coefficients
+length(Beta_OuluFall2007)
+Beta_OuluFall2007[1:100]
+
+###################
+gc()
+
+
+
+
+#lasso regression (+ environmental variables)
+OuluFall2007_R2_pred=c()
+OuluFall2007_R2_exp=c()
+rownames(OuluFall2007)=NULL 
+OuluFall2007folds=createFolds(rownames(OuluFall2007),10) #You need to create the folds only once
+
+for (i in unique(OuluFall2007folds)){
+	
+	OuluFall2007_Valid=OuluFall2007[i,] #Validation set
+	OuluFall2007_Train=OuluFall2007[-i,] #Training set
+	DTB_Valid=OuluFall2007[i,"DTB"] #Validation set
+	DTB_Train=OuluFall2007[-i,"DTB"] #Training set
+
+	OuluFall2007elasticnet0.001_trainedmodel<- glmnet(x=as.matrix(OuluFall2007_Train[,15:21184]),y=as.matrix(DTB_Train),alpha=0.001,lambda=OuluFall2007lasso_lambda)
+	DTB_hat_train=predict(OuluFall2007elasticnet0.001_trainedmodel,newx=as.matrix(OuluFall2007_Train[,15:21184]))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+	OuluFall2007_R2_exp=c(OuluFall2007_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(OuluFall2007elasticnet0.001_trainedmodel,newx=(as.matrix(OuluFall2007_Valid[,15:21184])))
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+	OuluFall2007_R2_pred=c(OuluFall2007_R2_pred,correlation)
+}
+
+OuluFall2007_elasticnet0.001_DTB_model=OuluFall2007elasticnet0.001_trainedmodel
+save(OuluFall2007_elasticnet0.001_DTB_model,file="OuluFall2007_elasticnet0.001_DTB_model_araclim.RData")
+
+OuluFall2007_R2_pred
+range(OuluFall2007_R2_pred)
+mean(OuluFall2007_R2_pred)
+range(OuluFall2007_R2_exp)
+
+Beta_OuluFall2007=OuluFall2007elasticnet0.001_trainedmodel$beta[,OuluFall2007elasticnet0.001_trainedmodel$dev.ratio==max(OuluFall2007elasticnet0.001_trainedmodel$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of null deviance is
+
+Beta_OuluFall2007=Beta_OuluFall2007[Beta_OuluFall2007!=0] # Retain only non-zero coefficients
+length(Beta_OuluFall2007)
+Beta_OuluFall2007[1:100]
+
+
+
+
+

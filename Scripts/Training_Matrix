@@ -1,0 +1,108 @@
+library(glmnet)
+library(caret)
+load("AllPlantings_scaled.RData")
+
+
+
+for (i in unique(AllPlantings_scaled_int$Planting)) {
+
+	assign(paste0("",i),AllPlantings_scaled_int[AllPlantings_scaled_int$Planting==i,])
+}
+Training_Matrix=matrix(NA,nrow=7,ncol=7)
+rownames(Training_Matrix)=unique(AllPlantings_scaled_int$Planting)
+colnames(Training_Matrix)=unique(AllPlantings_scaled_int$Planting)
+
+Training_Matrix1=Training_Matrix[1:2,]
+Training_Matrix2=Training_Matrix[3:5,]
+Training_Matrix2=Training_Matrix2[6:7,]
+
+
+
+temp=list.files(pattern="*_elasticnet0.001_SeedNum_model.RData")
+lapply(temp,load,.GlobalEnv) #Saves into the global environment
+
+##Filling up Training_Matrix1
+
+
+for (i in rownames(Training_Matrix1)){
+
+	for (j in colnames(Training_Matrix1)){
+	
+	SeedNum_Valid=as.matrix(eval(as.name(paste0(j)))[,"SeedNum"]) #Validation set
+
+	SeedNum_hat_valid=predict(eval(as.name(paste0(i,"_elasticnet0.001_SeedNum_model"))),newx=as.matrix(eval(as.name(paste0(j)))[,-c(1:14)]))
+
+	predictions=cor(SeedNum_Valid,SeedNum_hat_valid)
+	Training_Matrix1[rownames(Training_Matrix1)==i,colnames(Training_Matrix1)==j]=predictions
+
+	}}
+
+
+
+
+######
+
+
+gc()
+
+
+######
+
+##Filling up Training_Matrix2
+
+
+for (i in rownames(Training_Matrix2)){
+
+	for (j in colnames(Training_Matrix2)){
+	
+	SeedNum_Valid=as.matrix(eval(as.name(paste0(j)))[,"SeedNum"]) #Validation set
+
+	SeedNum_hat_valid=predict(eval(as.name(paste0(i,"_elasticnet0.001_SeedNum_model"))),newx=as.matrix(eval(as.name(paste0(j)))[,-c(1:14)]))
+
+	predictions=cor(SeedNum_Valid,SeedNum_hat_valid)
+	Training_Matrix2[rownames(Training_Matrix2)==i,colnames(Training_Matrix2)==j]=predictions
+
+	}}
+#######
+gc()
+
+##Filling up Training_Matrix_3
+
+
+
+for (i in rownames(Training_Matrix3)){
+
+	for (j in colnames(Training_Matrix3)){
+	
+	SeedNum_Valid=as.matrix(eval(as.name(paste0(j)))[,"SeedNum"]) #Validation set
+
+	SeedNum_hat_valid=predict(eval(as.name(paste0(i,"_elasticnet0.001_SeedNum_model"))),newx=as.matrix(eval(as.name(paste0(j)))[,-c(1:14)]))
+
+	predictions=cor(SeedNum_Valid,SeedNum_hat_valid)
+	Training_Matrix3[rownames(Training_Matrix3)==i,colnames(Training_Matrix3)==j]=predictions
+
+	}}
+
+###
+
+
+Training_Matrix_SeedNum=rbind(Training_Matrix1,Training_Matrix2,Training_Matrix3)
+##
+
+
+#Loading multiple files at once
+
+
+save(Training_Matrix_SeedNum,file="Training_Matrix_SeedNum.RData")
+
+
+
+
+#split into three training matrices?
+
+
+
+
+
+
+

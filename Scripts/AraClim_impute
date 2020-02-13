@@ -1,0 +1,149 @@
+#Trying to impute AraClim variables
+
+
+load("AllPlantings_Named_2.RData")
+b=read.csv("shiny climatesd.csv",header=TRUE,sep=",")
+
+#Removing character and factor columns
+
+b=b[, !sapply(b, is.character)]
+b=b[, !sapply(b, is.factor)]
+
+AraClim_all=b[, -3] #Remove the ecotype idcolumn because we want just interactions of environmental variables
+##Imputing
+
+pMiss <- function(x){sum(is.na(x))/length(x)*100}
+pMiss_results=apply(AraClim_all,2,pMiss) #Lots of missing values
+pMiss_results_lessthan5=pMiss_results[pMiss_results<5.00]
+AraClim_all_lessthan5=AraClim_all[,names(pMiss_results_lessthan5)]
+
+##
+
+library(mice)
+
+tempData<-mice(AraClim_all_lessthan5, m=5, method="pmm", maxit=5) #Imputing data
+completedData= complete(tempData,1) # 1 takes the first of the five datasets
+
+
+araClim_imputed=completedData
+
+
+
+
+
+##Imputed interaction matrix
+
+
+AraClim_inter=matrix(NA,ncol=0,nrow=nrow(araClim_imputed))
+for (i in 1:ncol(araClim_imputed)) {
+    AraClim_inter=cbind(AraClim_inter,araClim_imputed[,i]) #The single bioclim variable (no interaction)
+    AraClim_inter=cbind(AraClim_inter,apply(araClim_imputed[,1:ncol(araClim_imputed)],2,function(x) {x*araClim_imputed[,i]}))
+    
+}
+
+
+#Apply a function that multiplies each bioclim variable by colum to create pairwise interactions
+
+nameslist=c()
+
+yeah=colnames(araClim_imputed)
+yeah2=colnames(araClim_imputed)
+	
+for (i in yeah){
+for (j in yeah2){
+	namess=c(paste0(i,""),paste0(i,j))
+	nameslist=c(nameslist,namess)
+}}
+
+nameslist=unique(nameslist)
+colnames(AraClim_inter)=nameslist
+AraClim_imputed_inter=AraClim_inter
+
+
+AraClim_all_imputed=cbind(b[,3],AraClim_imputed_inter) #Combine the ecotype id and all the interactions
+colnames(AraClim_all_imputed)[1]="id"
+
+
+###Subsetting the AraClim_all data frame for the ecotypes who show up in AllPlantings_named
+araclim=matrix(NA,nrow=nrow(AllPlantings_named),ncol=ncol(AraClim_all_imputed))
+araclim=data.frame(araclim) #convert to a data frame
+colnames(araclim)=colnames(AraClim_all_imputed)
+araclim[,1]=AllPlantings_named$Ecotype_id
+
+AraClim_all_imputed=data.frame(AraClim_all_imputed) #convert araclim to a dataframe
+ 
+
+
+for (i in AllPlantings_named$Ecotype_id){
+
+	araclim_values=AraClim_all_imputed[AraClim_all_imputed$id==i,]
+	araclim[araclim$id==i,]=araclim_values
+
+}
+
+
+########
+
+########
+
+## Combining AraClim values and the All_Plantings dataset
+
+AllPlantings_araclim_imputed=cbind(AllPlantings_named[,1:14],araclim,AllPlantings_named[,-c(1:14)])
+AllPlantings_araclim_imputed=AllPlantings_araclim_imputed[,-15] #Removes the redundant second id column
+
+save(AllPlantings_araclim_imputed,file="AllPlantings_araclim_imputed.RData")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AraClim_inter=matrix(NA,ncol=0,nrow=nrow(AraClim_all))
+for (i in 1:ncol(AraClim_all)) {
+    AraClim_inter=cbind(AraClim_inter,AraClim_all[,i]) #The single bioclim variable (no interaction)
+    AraClim_inter=cbind(AraClim_inter,apply(AraClim_all[,1:ncol(AraClim_all)],2,function(x) {x*AraClim_all[,i]}))
+    
+}
+
+
+#Apply a function that multiplies each bioclim variable by colum to create pairwise interactions
+
+nameslist=c()
+
+yeah=colnames(AraClim_all)
+yeah2=colnames(AraClim_all)
+	
+for (i in yeah){
+for (j in yeah2){
+	namess=c(paste0(i,""),paste0(i,j))
+	nameslist=c(nameslist,namess)
+}}
+
+nameslist=unique(nameslist)
+colnames(AraClim_inter)=nameslist
+
+

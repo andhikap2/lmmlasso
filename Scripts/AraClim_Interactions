@@ -1,0 +1,100 @@
+## Removing character columns from AraCLIM dataset
+
+setwd("~/Clim_GWAS/Clim_GWAS_2")
+load("AllPlantings_Corrected.RData")
+b=read.csv("shiny climatesd.csv",header=TRUE,sep=",")
+
+#Removing character and factor columns
+
+b=b[, !sapply(b, is.character)]
+b=b[, !sapply(b, is.factor)]
+
+AraClim_all=b[, -3] #Remove the ecotype idcolumn because we want just interactions of environmental variables
+
+
+
+
+AraClim_inter=matrix(NA,ncol=0,nrow=nrow(AraClim_all))
+for (i in 1:ncol(AraClim_all)) {
+    AraClim_inter=cbind(AraClim_inter,AraClim_all[,i]) #The single bioclim variable (no interaction)
+    AraClim_inter=cbind(AraClim_inter,apply(AraClim_all[,1:ncol(AraClim_all)],2,function(x) {x*AraClim_all[,i]}))
+    
+}
+
+
+#Apply a function that multiplies each bioclim variable by colum to create pairwise interactions
+
+nameslist=c()
+
+yeah=colnames(AraClim_all)
+yeah2=colnames(AraClim_all)
+	
+for (i in yeah){
+for (j in yeah2){
+	namess=c(paste0(i,""),paste0(i,j))
+	nameslist=c(nameslist,namess)
+}}
+
+nameslist=unique(nameslist)
+colnames(AraClim_inter)=nameslist
+
+
+AraClim_all=cbind(b[,3],AraClim_inter) #Combine the ecotype id and all the interactions
+colnames(AraClim_all)[1]="id"
+AraClim_all=data.frame(AraClim_all)
+
+######################################################################
+
+
+#Removing ecotype 7236 Litva from AllPlantings_Corrected
+AllPlantings_Corrected=AllPlantings_Corrected[!AllPlantings_Corrected$Ecotype_id=="7236",]
+
+#######################################################################
+
+
+AllPlantings_Corrected_araclim=AllPlantings_Corrected[AllPlantings_Corrected$Ecotype_id %in% AraClim_all$id,]
+
+#Litva seems to be missing from the araclim set
+
+
+#######################################################################
+
+
+
+###Subsetting the AraClim_all data frame for the ecotypes who show up in AllPlantings_Corrected
+araclim=matrix(NA,nrow=nrow(AllPlantings_Corrected_araclim),ncol=ncol(AraClim_all))
+araclim=data.frame(araclim) #convert to a data frame
+colnames(araclim)=colnames(AraClim_all)
+araclim[,1]=AllPlantings_Corrected_araclim$Ecotype_id
+
+AraClim_all=data.frame(AraClim_all) #convert araclim to a dataframe
+araclim=data.frame(araclim)
+ 
+
+
+for (i in AllPlantings_Corrected$Ecotype_id){
+
+	araclim_values=AraClim_all[AraClim_all$id==i,]
+	araclim[araclim$id==i,]=araclim_values
+
+}
+
+########
+
+## Combining AraClim values and the All_Plantings datase
+AllPlantings_Corrected=AllPlantings_Corrected[AllPlantings_Corrected$Ecotype_id %in% araclim$id==TRUE,]
+
+AllPlantings_Corrected_araclim=cbind(AllPlantings_Corrected[,1:14],araclim,AllPlantings_Corrected[,-c(1:14)])
+AllPlantings_Corrected_araclim=AllPlantings_Corrected_araclim[,-15] #Removes the redundant second id column
+
+save(AllPlantings_Corrected_araclim,file="AllPlantings_Corrected_araclim.RData")
+
+
+
+
+
+
+
+
+
+

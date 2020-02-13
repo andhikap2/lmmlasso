@@ -1,0 +1,92 @@
+
+#Relaxed Lasso
+library(caret)
+library(foreach)
+library(doParallel)
+
+cl=makeCluster(10)
+registerDoParallel(cl)
+
+HalleFall2006_R2_exp=c()
+HalleFall2006_R2_pred=c()
+
+
+for (i in unique(HalleFall2006folds)){
+	
+	HalleFall2006_Valid=HalleFall2006[i,-c(1:14)] #Validation set
+	HalleFall2006_Train=HalleFall2006[-i,-c(1:14)] #Training set
+	DTB_Valid=HalleFall2006[i,"DTB"] #Validation set
+	DTB_Train=HalleFall2006[-i,"DTB"] #Training set
+
+
+	models=train(DTB_Train~as.matrix(HalleFall2006_Train),method="relaxo",phi=0.5)
+	DTB_hat_train=predict(models,newx=as.matrix(HalleFall2006_Train))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+	HalleFall2006_R2_exp=c(HalleFall2006_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(models,newdata=(as.matrix(HalleFall2006_Valid)))
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+	HalleFall2006_R2_pred=c(HalleFall2006_R2_pred,correlation)
+}
+#Parallel loops?
+
+foreach(i=unique(HalleFall2006folds),.combine=c) %dopar% {
+fx= function(i) { 
+	 
+
+	
+	HalleFall2006_Valid=HalleFall2006[i,-c(1:14)] #Validation set
+	HalleFall2006_Train=HalleFall2006[-i,-c(1:14)] #Training set
+	DTB_Valid=HalleFall2006[i,"DTB"] #Validation set
+	DTB_Train=HalleFall2006[-i,"DTB"] #Training set
+
+
+	models=train(DTB_Train~as.matrix(HalleFall2006_Train),method="relaxo",phi=0.5)
+	DTB_hat_train=predict(models,newx=as.matrix(HalleFall2006_Train))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+	HalleFall2006_R2_exp=c(HalleFall2006_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(models,newdata=(as.matrix(HalleFall2006_Valid)))
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+	HalleFall2006_R2_pred=c(HalleFall2006_R2_pred,correlation)
+}
+
+
+
+
+
+
+###Trying to create a function
+
+relaxohalle = function(i) {
+
+	
+	HalleFall2006_Valid=HalleFall2006[i,-c(1:14)] #Validation set
+	HalleFall2006_Train=HalleFall2006[-i,-c(1:14)] #Training set
+	DTB_Valid=HalleFall2006[i,"DTB"] #Validation set
+	DTB_Train=HalleFall2006[-i,"DTB"] #Training set
+
+
+	models=train(DTB_Train~as.matrix(HalleFall2006_Train),method="relaxo",phi=0.5)
+	DTB_hat_train=predict(models,newx=as.matrix(HalleFall2006_Train))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+	HalleFall2006_R2_exp=c(HalleFall2006_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(models,newdata=(as.matrix(HalleFall2006_Valid)))
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+	HalleFall2006_R2_pred=c(HalleFall2006_R2_pred,correlation)
+}
+
+i=unique(HalleFall2006folds)
+mclapply(i,relaxohalle)
+
+
+
+
+
+
+
+
+
+
+

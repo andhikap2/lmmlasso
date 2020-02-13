@@ -1,0 +1,76 @@
+
+Beta_Matrix=matrix(NA,nrow=7,ncol=7)
+rownames(Beta_Matrix)=unique(AllPlantings_named$Planting)
+colnames(Beta_Matrix)=unique(AllPlantings_named$Planting)
+
+for (i in rownames(Beta_Matrix)){
+
+	for (j in colnames(Beta_Matrix)){
+
+		v = sum (
+			names(eval(as.name(paste0("Beta_",i)))) %in% names(eval(as.name(paste0("Beta_",j)))))
+
+		b = length (
+			unique(c(names(eval(as.name(paste0("Beta_",i)))), names(eval(as.name(paste0("Beta_",j)))))))
+
+		m = v/b
+ 
+	Beta_Matrix[rownames(Beta_Matrix)==i,colnames(Beta_Matrix)==j]=m
+
+}}
+
+
+
+
+Accession_Matrix=matrix(NA,nrow=7,ncol=7)
+rownames(Accession_Matrix)=unique(AllPlantings_named$Planting)
+colnames(Accession_Matrix)=unique(AllPlantings_named$Planting)
+
+
+for (i in rownames(Beta_Matrix)){
+
+	for (j in colnames(Beta_Matrix)){
+			
+		uniqueIDs1=unique(eval(as.name(paste0(i)))[,"Ecotype_id"])
+		uniqueIDs2=unique(eval(as.name(paste0(j)))[,"Ecotype_id"])
+
+		a = sum (uniqueIDs1 %in% uniqueIDs2)
+		
+		b = length(
+			unique(
+				c(
+					eval(as.name(paste0(i)))[,"Ecotype_id"], eval(as.name(paste0(j)))[,"Ecotype_id"]
+		)))
+
+		c = a/b
+
+		Accession_Matrix[rownames(Accession_Matrix)==i,colnames(Accession_Matrix)==j]=c
+
+}}
+			
+
+
+
+
+
+
+
+
+
+
+
+sum(names(i) %in% names(j))
+	Beta_Matrix[rownames(Beta_Matrix)==i,colnames(Beta_Matrix==j)]= 
+
+
+
+
+
+
+
+
+(names(eval(as.name(paste(i)))) & names(eval(as.name(paste(j)))))
+
+
+unique(c(names(eval(as.name(paste(i)))), names(eval(as.name(paste(j))))))
+

@@ -1,0 +1,79 @@
+#Lasso taking into account environmental variables and the interactions between them (scaled by scale())
+library(glmnet)
+library(caret)
+load("AllPlantings_araclim_imputed_scaled.RData")
+AllPlantings_araclim_imputed_scaled=data.frame(AllPlantings_araclim_imputed_scaled)
+for (i in unique(AllPlantings_araclim_imputed_scaled$Planting)) {
+
+	assign(paste0("",i),AllPlantings_araclim_imputed_scaled[AllPlantings_araclim_imputed_scaled$Planting==i,])
+}
+
+
+
+#Determining range of lambdas to test
+lasso_cv <- cv.glmnet(x=as.matrix(HalleFall2006[,-c(1:14)]),y=as.matrix(HalleFall2006$DTB), alpha = 0.001, nfolds=10)
+HalleFall2006lasso_lambda<- lasso_cv$lambda.min
+
+## Finding % variance explained by model
+
+model = glmnet(x=as.matrix(HalleFall2006[,-c(1:14)]),y=as.matrix(HalleFall2006$DTB), alpha = 0.001,lambda=HalleFall2006lasso_lambda)
+predictions=predict(model,newx=as.matrix(HalleFall2006[,-c(1:14)]))
+percentage_exp=cor(predictions,HalleFall2006$DTB)
+print(percentage_exp)
+HalleFall2006_elasticnet0.001_DTB_model_araclim_imputed=model
+save(HalleFall2006_elasticnet0.001_DTB_model_araclim_imputed,file="HalleFall2006_elasticnet0.001_DTB_model_araclim_imputed.RData")
+
+
+Beta_HalleFall2006=HalleFall2006_elasticnet0.001_DTB_model_araclim_imputed$beta[,HalleFall2006_elasticnet0.001_DTB_model_araclim_imputed$dev.ratio==max(HalleFall2006_elasticnet0.001_DTB_model_araclim_imputed$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of nu
+
+Beta_HalleFall2006=Beta_HalleFall2006[Beta_HalleFall2006!=0] # Retain only non-zero coefficients
+length(Beta_HalleFall2006)
+Beta_HalleFall2006[1:100]
+
+###################
+gc()
+
+
+
+
+#lasso regression (+ environmental variables)
+HalleFall2006_R2_pred=c()
+HalleFall2006_R2_exp=c()
+rownames(HalleFall2006)=NULL 
+HalleFall2006folds=createFolds(rownames(HalleFall2006),10) #You need to create the folds only once
+
+for (i in unique(HalleFall2006folds)){
+	
+	HalleFall2006_Valid=HalleFall2006[i,] #Validation set
+	HalleFall2006_Train=HalleFall2006[-i,] #Training set
+	DTB_Valid=HalleFall2006[i,"DTB"] #Validation set
+	DTB_Train=HalleFall2006[-i,"DTB"] #Training set
+
+	HalleFall2006elasticnet0.001_trainedmodel<- glmnet(x=as.matrix(HalleFall2006_Train[,-c(1:14)]),y=as.matrix(DTB_Train),alpha=0.001,lambda=HalleFall2006lasso_lambda)
+	DTB_hat_train=predict(HalleFall2006elasticnet0.001_trainedmodel,newx=as.matrix(HalleFall2006_Train[,-c(1:14)]))
+	corr_exp=cor(DTB_hat_train,DTB_Train)
+	HalleFall2006_R2_exp=c(HalleFall2006_R2_exp,corr_exp) #Measures explanatory value
+
+	DTB_hat_valid=predict(HalleFall2006elasticnet0.001_trainedmodel,newx=(as.matrix(HalleFall2006_Valid[,-c(1:14)])))
+	correlation=cor(DTB_hat_valid,DTB_Valid) #Measures predictive value
+	HalleFall2006_R2_pred=c(HalleFall2006_R2_pred,correlation)
+}
+
+HalleFall2006_elasticnet0.001_DTB_model=HalleFall2006elasticnet0.001_trainedmodel
+save(HalleFall2006_elasticnet0.001_DTB_model,file="HalleFall2006_elasticnet0.001_DTB_model_araclim.RData")
+
+HalleFall2006_R2_pred
+range(HalleFall2006_R2_pred)
+mean(HalleFall2006_R2_pred)
+range(HalleFall2006_R2_exp)
+
+Beta_HalleFall2006=HalleFall2006elasticnet0.001_trainedmodel$beta[,HalleFall2006elasticnet0.001_trainedmodel$dev.ratio==max(HalleFall2006elasticnet0.001_trainedmodel$dev.ratio)]  #Obtain the Beta values where dev.ratio is max [The maximum fraction of null deviance is
+
+Beta_HalleFall2006=Beta_HalleFall2006[Beta_HalleFall2006!=0] # Retain only non-zero coefficients
+length(Beta_HalleFall2006)
+Beta_HalleFall2006[1:100]
+
+
+
+
+
